@@ -10,19 +10,17 @@
   <h1>Kabus - Monero Marketplace Script</h1>
 </div>
 
-## Introduction
-
-The purpose of creating Kabus was to contribute to the Monero ecosystem and ensure its growth. It was never created for any illegal purpose, nor does it encourage such activities. The aim of this marketplace script is to facilitate the sale of legal products online as anonymously as possible.
-
-Built with PHP 8.3 and Laravel 11.
-
-## Project Status and Future Direction
+<div align="center">
+    <h1>Project Status and Future Direction</h1>
+</div>
 
 Due to minimal donations, I have decided to discontinue active development of Kabus as an open-source project. Maintaining and enhancing this marketplace script requires significant time and resources, and without adequate community backing, it is no longer sustainable to continue development using my personal time while managing other financial obligations.
 
 **The Kabus repository will remain open-source and available for use.** You are free to fork, modify, and use the existing codebase according to the project's license terms.
 
-### Introducing Kabus-X
+<div align="center">
+    <h2>About Kabus-X</h2>
+</div>
 
 Moving forward, I am developing Kabus-X, which will be a premium, paid Monero marketplace script featuring:
 
@@ -33,7 +31,17 @@ Moving forward, I am developing Kabus-X, which will be a premium, paid Monero ma
 
 For more information about Kabus-X, including services, custom development, and portfolio showcase, please visit: https://github.com/sukunetsiz/kabus-x-studio
 
-## Core Features
+<div align="center">
+    <h1>Introduction</h1>
+</div>
+
+The purpose of creating Kabus was to contribute to the Monero ecosystem and ensure its growth. It was never created for any illegal purpose, nor does it encourage such activities. The aim of this marketplace script is to facilitate the sale of legal products online as anonymously as possible.
+
+Built with PHP 8.3 and Laravel 11.
+
+<div align="center">
+    <h2>Core Features</h2>
+</div>
 
 ### Monero Integration
 - **Vendor Registration Payment**: Monero Wallet RPC integration that generates a wallet address for vendor fee payments, with support for separate transactions and a 24-hour payment window
@@ -60,7 +68,9 @@ For more information about Kabus-X, including services, custom development, and 
 - **Mnemonic Recovery**: Built-in mnemonic phrase generation for key recovery
 - **No JavaScript**: Built entirely with pure PHP and does not utilize JavaScript in any capacity
 
-### Screenshots
+<div align="center">
+    <h1>Screenshots</h1>
+</div>
 
 ![Products Page](docs/1.png)
 ---
@@ -99,12 +109,13 @@ For more information about Kabus-X, including services, custom development, and 
   <h1><a href="docs/CONNECTING-MONERO-RPC.md">Monero Wallet RPC Guide</a></h1>
 </div>
 
-### Legacy Support
+<div align="center">
+    <h2>Legacy Support</h2>
+</div>
 
 While active development of Kabus has concluded, the open-source codebase remains available for community use. If you're using the existing code:
 
 - **Monero Donations**: Direct support through Monero payments
-- **Donation Address:** `89p3o8Umho9haXyAJHMwrfeeqea2UoJaZ6sknFvYVAitMFKJYTW54huh1enTQHBwdaWq5duyZ4ZsZjVcHQyiRZmfGbQMhce`
 - **Code Contributions**: Community pull requests and improvements are still welcome
 - **Bug Reports**: Issues can be reported for community visibility and potential fixes
 - **Community Fork**: Users are encouraged to fork and maintain their own versions
@@ -112,6 +123,16 @@ While active development of Kabus has concluded, the open-source codebase remain
 *For professional support and ongoing development, consider Kabus-X.*
 
 ---
+
+<div align="center">
+
+## Donation Address
+
+![Monero QR](docs/monero-donate.png)
+
+**Monero (XMR)** `89p3o8Umho9haXyAJHMwrfeeqea2UoJaZ6sknFvYVAitMFKJYTW54huh1enTQHBwdaWq5duyZ4ZsZjVcHQyiRZmfGbQMhce`
+
+</div>
 
 ```
 Privacy is a human right, and it can never be taken away from anyone, nor should it even be suggested.
