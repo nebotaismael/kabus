@@ -4,11 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Orders;
 use App\Models\Cart;
-use App\Models\Dispute;
+use App\Services\NowPaymentsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\XmrPriceController;
-use MoneroIntegrations\MoneroPhp\walletRPC;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Encoding\Encoding;
 use Endroid\QrCode\ErrorCorrectionLevel;
@@ -17,24 +16,6 @@ use Illuminate\Support\Facades\Log;
 
 class OrdersController extends Controller
 {
-    protected $walletRPC;
-    
-    /**
-     * Create a new controller instance.
-     */
-    public function __construct()
-    {
-        $config = config('monero');
-        try {
-            $this->walletRPC = new walletRPC(
-                $config['host'],
-                $config['port'],
-                $config['ssl']
-            );
-        } catch (\Exception $e) {
-            Log::error('Failed to initialize Monero RPC connection: ' . $e->getMessage());
-        }
-    }
     /**
      * Display a listing of the user's orders.
      */
@@ -50,7 +31,7 @@ class OrdersController extends Controller
     /**
      * Display the specified order.
      */
-    public function show($uniqueUrl)
+    public function show($uniqueUrl, NowPaymentsService $nowPaymentsService)
     {
         // Process any orders that need auto status changes
         Orders::processAllAutoStatusChanges();
@@ -74,7 +55,7 @@ class OrdersController extends Controller
         $qrCode = null;
         if ($isBuyer && $order->status === Orders::STATUS_WAITING_PAYMENT) {
             // First check if the order has an expired payment
-            if ($order->isExpired() && !empty($order->payment_address)) {
+            if ($order->isExpired() && !empty($order->pay_address)) {
                 // Handle expired payment (cancels the order)
                 $order->handleExpiredPayment();
                 
@@ -109,15 +90,15 @@ class OrdersController extends Controller
                 }
             }
             
-            // Only generate a payment address if none exists and the order isn't cancelled
-            if (empty($order->payment_address) && $order->status === Orders::STATUS_WAITING_PAYMENT) {
+            // Only create a NowPayments payment if none exists and the order isn't cancelled
+            if (empty($order->np_payment_id) && $order->status === Orders::STATUS_WAITING_PAYMENT) {
                 try {
                     // Get current XMR/USD rate
                     $xmrPriceController = new XmrPriceController();
                     $xmrRate = $xmrPriceController->getXmrPrice();
                     
                     if ($xmrRate === 'UNAVAILABLE') {
-                        return redirect()->back()->with('error', 'Unable to get XMR price. Please try again later.');
+                        return redirect()->back()->with('error', 'Unable to get current cryptocurrency exchange rate. The payment service may be temporarily unavailable. Please try again in a few minutes.');
                     }
                     
                     // Calculate required XMR amount
@@ -128,30 +109,39 @@ class OrdersController extends Controller
                     $order->xmr_usd_rate = $xmrRate;
                     $order->save();
                     
-                    // Generate payment address
-                    if (!$order->generatePaymentAddress($this->walletRPC)) {
-                        return redirect()->back()->with('error', 'Unable to generate payment address. Please try again.');
+                    // Create payment via NowPayments
+                    $paymentResult = $nowPaymentsService->createPayment(
+                        $order->total,
+                        'usd',
+                        'xmr',
+                        $order->id,
+                        'order'
+                    );
+                    
+                    if ($paymentResult) {
+                        // Store NowPayments details in order
+                        $order->np_payment_id = $paymentResult['payment_id'];
+                        $order->pay_address = $paymentResult['pay_address'];
+                        $order->pay_amount = $paymentResult['pay_amount'];
+                        $order->pay_currency = $paymentResult['pay_currency'] ?? 'xmr';
+                        $order->expires_at = now()->addMinutes((int) config('monero.address_expiration_time', 1440));
+                        $order->save();
+                    } else {
+                        return redirect()->back()->with('error', 'Unable to create payment address. The payment service may be temporarily unavailable. Please try again in a few minutes.');
                     }
                 } catch (\Exception $e) {
                     Log::error('Error setting up payment: ' . $e->getMessage());
-                    return redirect()->back()->with('error', 'Error setting up payment: ' . $e->getMessage());
+                    return redirect()->back()->with('error', 'An error occurred while setting up your payment. Please try again later. If the problem persists, please contact support.');
                 }
-            }
-            
-            // Check for new payments
-            try {
-                $order->checkPayments($this->walletRPC);
-            } catch (\Exception $e) {
-                Log::error('Error checking payments: ' . $e->getMessage());
             }
             
             // Refresh order data after potential updates
             $order->refresh();
             
             // Generate QR code if payment is not completed
-            if (!$order->is_paid && $order->payment_address) {
+            if (!$order->is_paid && $order->pay_address) {
                 try {
-                    $qrCode = $this->generateQrCode($order->payment_address);
+                    $qrCode = $this->generateQrCode($order->pay_address, $order->pay_amount);
                 } catch (\Exception $e) {
                     Log::error('Error generating QR code: ' . $e->getMessage());
                 }
@@ -235,15 +225,22 @@ class OrdersController extends Controller
     }
 
     /**
-     * Generate a QR code for the given address.
+     * Generate a QR code for the given address with optional amount.
+     * Creates a Monero URI format: monero:address?tx_amount=amount
      */
-    private function generateQrCode($address)
+    private function generateQrCode($address, $amount = null)
     {
         try {
+            // Build Monero URI with amount if provided
+            $data = $address;
+            if ($amount !== null && $amount > 0) {
+                $data = "monero:{$address}?tx_amount={$amount}";
+            }
+            
             $result = Builder::create()
                 ->writer(new PngWriter())
                 ->writerOptions([])
-                ->data($address)
+                ->data($data)
                 ->encoding(new Encoding('UTF-8'))
                 ->errorCorrectionLevel(ErrorCorrectionLevel::High)
                 ->size(300)

@@ -22,6 +22,7 @@ use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrdersController;
 use App\Http\Controllers\DisputesController;
+use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
@@ -34,6 +35,12 @@ use App\Http\Middleware\CheckBanned;
 // -----------------------------------------------------------------------------
 // When users first enter the site, they are taken to the login page.
 Route::get('/', [AuthController::class, 'showLoginForm'])->name('login');
+
+// -----------------------------------------------------------------------------
+// Webhook Routes (No Authentication Required)
+// -----------------------------------------------------------------------------
+Route::post('/api/webhooks/nowpayments', [WebhookController::class, 'handle'])
+    ->name('webhooks.nowpayments');
 
 // -----------------------------------------------------------------------------
 // Public File Routes

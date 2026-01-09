@@ -46,7 +46,10 @@ class Orders extends Model
         'completed_at',
         'disputed_at',
         'payment_address',
-        'payment_address_index',
+        'np_payment_id',
+        'pay_address',
+        'pay_amount',
+        'pay_currency',
         'required_xmr_amount',
         'total_received_xmr',
         'xmr_usd_rate',
@@ -55,9 +58,11 @@ class Orders extends Model
         'vendor_payment_amount',
         'vendor_payment_address',
         'vendor_payment_at',
+        'vendor_payout_id',
         'buyer_refund_amount',
         'buyer_refund_address',
-        'buyer_refund_at'
+        'buyer_refund_at',
+        'buyer_payout_id'
     ];
 
     /**
@@ -71,6 +76,7 @@ class Orders extends Model
         'total' => 'decimal:2',
         'required_xmr_amount' => 'decimal:12',
         'total_received_xmr' => 'decimal:12',
+        'pay_amount' => 'decimal:12',
         'vendor_payment_amount' => 'decimal:12',
         'buyer_refund_amount' => 'decimal:12',
         'xmr_usd_rate' => 'decimal:2',
@@ -151,88 +157,6 @@ class Orders extends Model
     public function dispute()
     {
         return $this->hasOne(Dispute::class, 'order_id');
-    }
-
-    /**
-     * Generate a Monero subaddress for the order payment.
-     * 
-     * @param \MoneroIntegrations\MoneroPhp\walletRPC $walletRPC
-     * @return bool
-     */
-    public function generatePaymentAddress($walletRPC)
-    {
-        try {
-            // Only generate an address if none exists
-            if (empty($this->payment_address)) {
-                $result = $walletRPC->create_address(0, "Order Payment " . $this->id);
-                
-                $this->payment_address = $result['address'];
-                $this->payment_address_index = $result['address_index'];
-                $this->expires_at = now()->addMinutes((int) config('monero.address_expiration_time', 1440));
-                $this->save();
-            }
-            
-            return true;
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to generate payment address: ' . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Check for and process new payments.
-     * 
-     * @param \MoneroIntegrations\MoneroPhp\walletRPC $walletRPC
-     * @return bool
-     */
-    public function checkPayments($walletRPC)
-    {
-        if ($this->is_paid || $this->status !== self::STATUS_WAITING_PAYMENT) {
-            return false;
-        }
-
-        try {
-            // Check for new payments
-            $transfers = $walletRPC->get_transfers([
-                'in' => true,
-                'pool' => true,
-                'subaddr_indices' => [$this->payment_address_index]
-            ]);
-
-            // Calculate minimum accepted payment amount (10% of required amount)
-            $minPaymentPercentage = 0.10; // Could also use a config value like for advertisements
-            $minAcceptedAmount = $this->required_xmr_amount * $minPaymentPercentage;
-
-            $totalReceived = 0;
-            foreach (['in', 'pool'] as $type) {
-                if (isset($transfers[$type])) {
-                    foreach ($transfers[$type] as $transfer) {
-                        // Only count payments that meet the minimum threshold
-                        $amount = $transfer['amount'] / 1e12;
-                        if ($amount >= $minAcceptedAmount) {
-                            $totalReceived += $amount;
-                        }
-                    }
-                }
-            }
-
-            // Update received amount
-            $this->total_received_xmr = $totalReceived;
-
-            // Check if payment is completed
-            if ($totalReceived >= $this->required_xmr_amount && !$this->is_paid) {
-                $this->status = self::STATUS_PAYMENT_RECEIVED;
-                $this->is_paid = true;
-                $this->paid_at = now();
-                $this->payment_completed_at = now();
-            }
-
-            $this->save();
-            return true;
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Error checking order payments: ' . $e->getMessage());
-            return false;
-        }
     }
 
     /**
@@ -532,6 +456,7 @@ class Orders extends Model
 
     /**
      * Process automatic payment to vendor when order is completed.
+     * Uses NowPayments Payout API instead of Monero RPC.
      * 
      * @return bool
      */
@@ -563,31 +488,34 @@ class Orders extends Model
                 return false;
             }
 
-            // Initialize Monero wallet RPC
-            $config = config('monero');
-            $walletRPC = new \MoneroIntegrations\MoneroPhp\walletRPC(
-                $config['host'],
-                $config['port'],
-                $config['ssl'],
-                30000  // 30 second timeout
+            // Use NowPayments Payout API
+            $nowPaymentsService = app(\App\Services\NowPaymentsService::class);
+            $result = $nowPaymentsService->createPayout(
+                $returnAddress->monero_address,
+                $vendorPaymentAmount,
+                'xmr',
+                "Vendor payment for order {$this->id}"
             );
-
-            // Process payment to vendor
-            $result = $walletRPC->transfer([
-                'address' => $returnAddress->monero_address,
-                'amount' => $vendorPaymentAmount,
-                'priority' => 1
-            ]);
-
-            // Log successful payment
-            \Illuminate\Support\Facades\Log::info("Vendor payment processed: Order {$this->id}, Amount: {$vendorPaymentAmount} XMR, Address: {$returnAddress->monero_address}");
 
             // Update order with payment details
             $this->vendor_payment_amount = $vendorPaymentAmount;
             $this->vendor_payment_address = $returnAddress->monero_address;
             $this->vendor_payment_at = now();
-            $this->save();
 
+            if ($result && isset($result['id'])) {
+                $this->vendor_payout_id = $result['id'];
+                \Illuminate\Support\Facades\Log::info("Vendor payment processed: Order {$this->id}, Amount: {$vendorPaymentAmount} XMR, Address: {$returnAddress->monero_address}, Payout ID: {$result['id']}");
+            } else {
+                // Log error but don't block - payment details are saved for manual processing
+                \Illuminate\Support\Facades\Log::error("Vendor payout API call failed for order {$this->id}. Payment details saved for manual processing.", [
+                    'order_id' => $this->id,
+                    'vendor_id' => $vendor->id,
+                    'amount' => $vendorPaymentAmount,
+                    'address' => $returnAddress->monero_address,
+                ]);
+            }
+
+            $this->save();
             return true;
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error("Error processing vendor payment for order {$this->id}: " . $e->getMessage());
@@ -597,6 +525,7 @@ class Orders extends Model
 
     /**
      * Process automatic refund to buyer when an order is cancelled.
+     * Uses NowPayments Payout API instead of Monero RPC.
      * 
      * @return bool
      */
@@ -629,31 +558,34 @@ class Orders extends Model
                 return false;
             }
             
-            // Initialize Monero wallet RPC
-            $config = config('monero');
-            $walletRPC = new \MoneroIntegrations\MoneroPhp\walletRPC(
-                $config['host'],
-                $config['port'],
-                $config['ssl'],
-                30000  // 30 second timeout
+            // Use NowPayments Payout API
+            $nowPaymentsService = app(\App\Services\NowPaymentsService::class);
+            $result = $nowPaymentsService->createPayout(
+                $returnAddress->monero_address,
+                $buyerRefundAmount,
+                'xmr',
+                "Buyer refund for order {$this->id}"
             );
-            
-            // Process refund to buyer
-            $result = $walletRPC->transfer([
-                'address' => $returnAddress->monero_address,
-                'amount' => $buyerRefundAmount,
-                'priority' => 1
-            ]);
-            
-            // Log successful refund
-            \Illuminate\Support\Facades\Log::info("Buyer refund processed: Order {$this->id}, Amount: {$buyerRefundAmount} XMR, Address: {$returnAddress->monero_address}");
             
             // Update order with refund details
             $this->buyer_refund_amount = $buyerRefundAmount;
             $this->buyer_refund_address = $returnAddress->monero_address;
             $this->buyer_refund_at = now();
+
+            if ($result && isset($result['id'])) {
+                $this->buyer_payout_id = $result['id'];
+                \Illuminate\Support\Facades\Log::info("Buyer refund processed: Order {$this->id}, Amount: {$buyerRefundAmount} XMR, Address: {$returnAddress->monero_address}, Payout ID: {$result['id']}");
+            } else {
+                // Log error but don't block - refund details are saved for manual processing
+                \Illuminate\Support\Facades\Log::error("Buyer refund payout API call failed for order {$this->id}. Refund details saved for manual processing.", [
+                    'order_id' => $this->id,
+                    'buyer_id' => $buyer->id,
+                    'amount' => $buyerRefundAmount,
+                    'address' => $returnAddress->monero_address,
+                ]);
+            }
+
             $this->save();
-            
             return true;
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error("Error processing buyer refund for order {$this->id}: " . $e->getMessage());

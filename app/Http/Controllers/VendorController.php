@@ -9,8 +9,8 @@ use App\Models\Product;
 use App\Models\Category;
 use App\Models\Advertisement;
 use App\Models\Orders;
+use App\Services\NowPaymentsService;
 use Illuminate\Support\Facades\Storage;
-use MoneroIntegrations\MoneroPhp\walletRPC;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Encoding\Encoding;
 use Endroid\QrCode\ErrorCorrectionLevel;
@@ -30,7 +30,6 @@ use Exception;
 
 class VendorController extends Controller
 {
-    protected $walletRPC;
     private $allowedMimeTypes = [
         'image/jpeg',
         'image/png',
@@ -43,16 +42,7 @@ class VendorController extends Controller
      */
     public function __construct()
     {
-        $config = config('monero');
-        try {
-            $this->walletRPC = new walletRPC(
-                $config['host'],
-                $config['port'],
-                $config['ssl']
-            );
-        } catch (\Exception $e) {
-            Log::error('Failed to initialize Monero RPC connection: ' . $e->getMessage());
-        }
+        // No longer initializing Monero RPC - using NowPayments instead
     }
 
     /**
@@ -785,7 +775,7 @@ class VendorController extends Controller
     /**
      * Store a new advertisement and initiate payment.
      */
-    public function storeAdvertisement(Request $request, Product $product)
+    public function storeAdvertisement(Request $request, Product $product, NowPaymentsService $nowPaymentsService)
     {
         // Check if the authenticated user owns this product
         if ($product->user_id !== Auth::id()) {
@@ -836,24 +826,48 @@ class VendorController extends Controller
         }
 
         try {
-            // Calculate required amount
-            $requiredAmount = Advertisement::calculateRequiredAmount(
+            // Calculate required amount in USD
+            $requiredAmountUsd = Advertisement::calculateRequiredAmount(
                 $validated['slot_number'],
                 $validated['duration_days']
             );
 
-            // Create Monero subaddress
-            $result = $this->walletRPC->create_address(0, "Advertisement Payment " . Auth::id() . "_" . time());
+            // Generate payment identifier
+            $paymentIdentifier = Str::random(64);
 
-            // Create advertisement record
+            // Create NowPayments payment
+            $paymentResult = $nowPaymentsService->createPayment(
+                $requiredAmountUsd,
+                'usd',
+                'xmr',
+                $paymentIdentifier,
+                'advertisement'
+            );
+
+            if (!$paymentResult || !isset($paymentResult['payment_id'])) {
+                Log::error('Failed to create NowPayments payment for advertisement', [
+                    'user_id' => Auth::id(),
+                    'product_id' => $product->id,
+                    'amount_usd' => $requiredAmountUsd,
+                ]);
+                return redirect()
+                    ->back()
+                    ->withInput()
+                    ->with('error', 'Unable to create advertisement payment. Please try again later.');
+            }
+
+            // Create advertisement record with NowPayments details
             $advertisement = new Advertisement([
                 'product_id' => $product->id,
                 'user_id' => Auth::id(),
                 'slot_number' => $validated['slot_number'],
                 'duration_days' => $validated['duration_days'],
-                'payment_address' => $result['address'],
-                'payment_address_index' => $result['address_index'],
-                'required_amount' => $requiredAmount,
+                'payment_identifier' => $paymentIdentifier,
+                'np_payment_id' => $paymentResult['payment_id'],
+                'pay_address' => $paymentResult['pay_address'],
+                'pay_amount' => $paymentResult['pay_amount'],
+                'pay_currency' => $paymentResult['pay_currency'] ?? 'xmr',
+                'required_amount' => $requiredAmountUsd,
                 'expires_at' => now()->addMinutes((int) config('monero.address_expiration_time')),
             ]);
 
@@ -872,6 +886,7 @@ class VendorController extends Controller
 
     /**
      * Show the advertisement payment page.
+     * Payment status is updated via webhook - no RPC polling.
      */
     public function showAdvertisementPayment(string $identifier)
     {
@@ -880,69 +895,22 @@ class VendorController extends Controller
             ->firstOrFail();
 
         // Check if payment has expired
-        if ($advertisement->isExpired()) {
+        if ($advertisement->isExpired() && !$advertisement->payment_completed) {
             return redirect()
                 ->route('vendor.my-products')
                 ->with('error', 'Payment window has expired.');
         }
 
-        try {
-            // Check for new payments
-            $transfers = $this->walletRPC->get_transfers([
-                'in' => true,
-                'pool' => true,
-                'subaddr_indices' => [$advertisement->payment_address_index]
-            ]);
-
-            // Calculate minimum accepted payment amount
-            $minPaymentPercentage = config('monero.advertisement_minimum_payment_percentage');
-            $minAcceptedAmount = $advertisement->required_amount * $minPaymentPercentage;
-
-            $totalReceived = 0;
-            foreach (['in', 'pool'] as $type) {
-                if (isset($transfers[$type])) {
-                    foreach ($transfers[$type] as $transfer) {
-                        // Only count payments that meet the minimum threshold
-                        $amount = $transfer['amount'] / 1e12;
-                        if ($amount >= $minAcceptedAmount) {
-                            $totalReceived += $amount;
-                        }
-                    }
-                }
-            }
-
-            // Update received amount
-            $advertisement->total_received = $totalReceived;
-
-            // Check if payment is completed
-            if ($totalReceived >= $advertisement->required_amount && !$advertisement->payment_completed) {
-                $advertisement->payment_completed = true;
-                $advertisement->payment_completed_at = now();
-                $advertisement->starts_at = now();
-                $advertisement->ends_at = now()->addDays((int) $advertisement->duration_days);
-            }
-
-            $advertisement->save();
-
-            // Generate QR code
-            $qrCode = null;
-            if (!$advertisement->payment_completed) {
-                $qrCode = $this->generateQrCode($advertisement->payment_address);
-            }
-
-            return view('vendor.advertisement.payment', [
-                'advertisement' => $advertisement,
-                'qrCode' => $qrCode
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error processing advertisement payment: ' . $e->getMessage());
-            return view('vendor.advertisement.payment', [
-                'advertisement' => $advertisement,
-                'qrCode' => null,
-                'error' => 'Error checking payment status. Please try refreshing the page.'
-            ]);
+        // Generate QR code for payment address
+        $qrCode = null;
+        if (!$advertisement->payment_completed && $advertisement->pay_address) {
+            $qrCode = $this->generateQrCode($advertisement->pay_address);
         }
+
+        return view('vendor.advertisement.payment', [
+            'advertisement' => $advertisement,
+            'qrCode' => $qrCode
+        ]);
     }
 
     /**

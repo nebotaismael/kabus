@@ -3,14 +3,13 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use MoneroIntegrations\MoneroPhp\walletRPC;
+use App\Services\NowPaymentsService;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Encoding\Encoding;
 use Endroid\QrCode\ErrorCorrectionLevel;
 use Endroid\QrCode\Writer\PngWriter;
 use App\Models\VendorPayment;
 use App\Models\User;
-use App\Models\Role;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -24,22 +23,6 @@ use Intervention\Image\Exceptions\NotReadableException;
 
 class BecomeVendorController extends Controller
 {
-    protected $walletRPC;
-
-    public function __construct()
-    {
-        $config = config('monero');
-        try {
-            $this->walletRPC = new walletRPC(
-                $config['host'],
-                $config['port'],
-                $config['ssl']
-            );
-        } catch (\Exception $e) {
-            Log::error('Failed to initialize Monero RPC connection: ' . $e->getMessage());
-            // Optionally, handle the error more gracefully here.
-        }
-    }
 
     public function index(Request $request)
     {
@@ -62,7 +45,7 @@ class BecomeVendorController extends Controller
         return view('become-vendor.index', compact('hasPgpVerified', 'hasMoneroAddress', 'vendorPayment'));
     }
 
-    public function payment(Request $request)
+    public function payment(Request $request, NowPaymentsService $nowPaymentsService)
     {
         $user = $request->user();
 
@@ -96,7 +79,7 @@ class BecomeVendorController extends Controller
         }
 
         try {
-            $vendorPayment = $this->getCurrentVendorPayment($user);
+            $vendorPayment = $this->getCurrentVendorPayment($user, $nowPaymentsService);
             $qrCodeDataUri = $vendorPayment ? $this->generateQrCode($vendorPayment->address) : null;
 
             return view('become-vendor.payment', [
@@ -108,26 +91,27 @@ class BecomeVendorController extends Controller
         } catch (\Exception $e) {
             Log::error('Error in payment process: ' . $e->getMessage());
             return view('become-vendor.payment', [
-                'error'           => 'An error occurred while processing your payment. Please try again later.',
+                'error'           => 'An error occurred while setting up your payment. The payment service may be temporarily unavailable. Please try again in a few minutes.',
                 'hasPgpVerified'  => $hasPgpVerified,
                 'hasMoneroAddress'=> $hasMoneroAddress
             ]);
         }
     }
 
-    private function getCurrentVendorPayment(User $user)
+    private function getCurrentVendorPayment(User $user, NowPaymentsService $nowPaymentsService)
     {
         try {
+            // Look for an existing non-expired vendor payment
             $vendorPayment = VendorPayment::where('user_id', $user->id)
                 ->where('expires_at', '>', Carbon::now())
                 ->orderBy('created_at', 'desc')
                 ->first();
 
             if ($vendorPayment) {
-                $this->checkIncomingTransaction($vendorPayment);
+                // Payment status is now updated via webhook, no need to check RPC
                 return $vendorPayment;
             } else {
-                return $this->createVendorPayment($user);
+                return $this->createVendorPayment($user, $nowPaymentsService);
             }
         } catch (\Exception $e) {
             Log::error('Error getting current vendor payment: ' . $e->getMessage());
@@ -135,61 +119,55 @@ class BecomeVendorController extends Controller
         }
     }
 
-    private function createVendorPayment(User $user)
+    private function createVendorPayment(User $user, NowPaymentsService $nowPaymentsService)
     {
         try {
-            $result = $this->walletRPC->create_address(0, "Vendor Payment " . $user->id . "_" . time());
+            // Get the required vendor payment amount from config
+            $requiredAmount = config('monero.vendor_payment_required_amount', 0.4);
+            
+            // Create payment via NowPayments
+            $paymentResult = $nowPaymentsService->createPayment(
+                $requiredAmount,
+                'xmr',  // Price in XMR
+                'xmr',  // Pay in XMR
+                null,   // Will use identifier as order_id
+                'vendor_fee'
+            );
+            
+            if (!$paymentResult) {
+                throw new \Exception('Failed to create payment with NowPayments - payment service may be unavailable');
+            }
             
             $vendorPayment = new VendorPayment([
-                'address'       => $result['address'],
-                'address_index' => $result['address_index'],
+                'address'       => $paymentResult['pay_address'],
+                'np_payment_id' => $paymentResult['payment_id'],
+                'pay_currency'  => $paymentResult['pay_currency'] ?? 'xmr',
                 'user_id'       => $user->id,
                 'expires_at'    => Carbon::now()->addMinutes((int) config('monero.address_expiration_time')),
             ]);
             $vendorPayment->save();
-
-            Log::info('Created new vendor payment address for user ' . $user->id);
-            return $vendorPayment;
-        } catch (\Exception $e) {
-            Log::error('Error creating Monero subaddress: ' . $e->getMessage());
-            throw $e;
-        }
-    }
-
-    private function checkIncomingTransaction(VendorPayment $vendorPayment)
-    {
-        try {
-            $config = config('monero');
-            $transfers = $this->walletRPC->get_transfers([
-                'in'             => true,
-                'pool'           => true,
-                'subaddr_indices'=> [$vendorPayment->address_index]
-            ]);
             
-            $totalReceived = 0;
+            // Update the identifier to be used as order_id for webhook matching
+            // Re-create payment with the identifier as order_id
+            $paymentResult = $nowPaymentsService->createPayment(
+                $requiredAmount,
+                'xmr',
+                'xmr',
+                $vendorPayment->identifier,
+                'vendor_fee'
+            );
             
-            foreach (['in', 'pool'] as $type) {
-                if (isset($transfers[$type])) {
-                    foreach ($transfers[$type] as $transfer) {
-                        if ($transfer['amount'] >= $config['vendor_payment_minimum_amount'] * 1e12) {
-                            $totalReceived += $transfer['amount'] / 1e12;
-                        }
-                    }
-                }
-            }
-            
-            $vendorPayment->total_received = $totalReceived;
-            $vendorPayment->save();
-            
-            if ($totalReceived >= $config['vendor_payment_required_amount'] && !$vendorPayment->payment_completed) {
-                $vendorPayment->payment_completed = true;
+            if ($paymentResult) {
+                $vendorPayment->address = $paymentResult['pay_address'];
+                $vendorPayment->np_payment_id = $paymentResult['payment_id'];
                 $vendorPayment->save();
             }
 
-            Log::info('Updated incoming transaction for user ' . $vendorPayment->user_id . '. Total received: ' . $totalReceived);
+            Log::info("Created new vendor payment via NowPayments for user {$user->id}");
+            return $vendorPayment;
         } catch (\Exception $e) {
-            Log::error('Error checking incoming Monero transaction: ' . $e->getMessage());
-            throw $e;
+            Log::error('Error creating NowPayments vendor payment: ' . $e->getMessage());
+            throw new \Exception('Unable to create payment address. Please try again later.');
         }
     }
 

@@ -14,7 +14,8 @@ class VendorPayment extends Model
     protected $fillable = [
         'identifier',
         'address',
-        'address_index',
+        'np_payment_id',
+        'pay_currency',
         'user_id',
         'total_received',
         'expires_at',
@@ -25,7 +26,8 @@ class VendorPayment extends Model
         'application_submitted_at',
         'admin_response_at',
         'refund_amount',
-        'refund_address'
+        'refund_address',
+        'refund_payout_id'
     ];
 
     protected $casts = [

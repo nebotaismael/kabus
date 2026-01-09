@@ -109,35 +109,25 @@
             
                 <div class="orders-show-payment-details">
                     <div class="orders-show-payment-row">
-                        <span class="orders-show-payment-label">Required Amount:</span>
+                        <span class="orders-show-payment-label">Exact Amount to Send:</span>
                         <span class="orders-show-payment-value">
-                            <span class="orders-show-payment-amount">ɱ{{ number_format($order->required_xmr_amount, 12) }} XMR</span>
+                            <span class="orders-show-payment-amount">ɱ{{ number_format($order->pay_amount, 12) }} {{ strtoupper($order->pay_currency ?? 'XMR') }}</span>
                         </span>
                     </div>
                 
                     <div class="orders-show-payment-row">
-                        <span class="orders-show-payment-label">USD/XMR Rate:</span>
+                        <span class="orders-show-payment-label">Order Total (USD):</span>
                         <span class="orders-show-payment-value">
-                            ${{ number_format($order->xmr_usd_rate, 2) }} per XMR
+                            ${{ number_format($order->total, 2) }}
                         </span>
                     </div>
                 
-                    <div class="orders-show-payment-row">
-                        <span class="orders-show-payment-label">Minimum Payment:</span>
-                        <span class="orders-show-payment-value">
-                            <span class="orders-show-payment-amount">ɱ{{ number_format($order->required_xmr_amount * 0.1, 12) }} XMR (10%)</span>
-                        </span>
-                    </div>
-                
-                    @if($order->total_received_xmr > 0 && !$order->is_paid)
+                    @if($order->xmr_usd_rate)
                         <div class="orders-show-payment-row">
-                            <span class="orders-show-payment-label">Amount Received:</span>
-                            <div class="orders-show-payment-value-group">
-                                <span class="orders-show-payment-amount">ɱ{{ number_format($order->total_received_xmr, 12) }} XMR</span>
-                                <span class="orders-show-payment-remaining">
-                                    Remaining: ɱ{{ number_format($order->required_xmr_amount - $order->total_received_xmr, 12) }} XMR
-                                </span>
-                            </div>
+                            <span class="orders-show-payment-label">USD/XMR Rate:</span>
+                            <span class="orders-show-payment-value">
+                                ${{ number_format($order->xmr_usd_rate, 2) }} per XMR
+                            </span>
                         </div>
                     @endif
                 
@@ -147,10 +137,6 @@
                             @if($order->is_paid)
                                 <span class="orders-show-payment-status orders-show-payment-status-completed">
                                     Payment Completed
-                                </span>
-                            @elseif($order->total_received_xmr > 0 && $order->total_received_xmr < $order->required_xmr_amount)
-                                <span class="orders-show-payment-status orders-show-payment-status-insufficient">
-                                    Insufficient Amount
                                 </span>
                             @else
                                 <span class="orders-show-payment-status orders-show-payment-status-awaiting">
@@ -163,16 +149,20 @@
             
                 @if($order->expires_at)
                     <div class="orders-show-payment-expiry">
-                        <p>The payment window expires in {{ $order->expires_at->diffForHumans() }}. Your order will be automatically canceled if the required amount of Monero for the purchase hasn't been met, and any incomplete amount will not be returned to your address after automatic cancellation.</p>
+                        <p>The payment window expires {{ $order->expires_at->diffForHumans() }}. Your order will be automatically canceled if payment is not received before expiration.</p>
                     </div>
 
                     <div class="orders-show-payment-disclaimer">
                         <p>After completing the order, if you (the buyer) or the vendor cancels the order, a small cancellation fee will be applied to protect our website and prevent spam. This means you will receive slightly less than the original amount when your money is refunded.</p>
                     </div>
                 @endif
+
+                <div class="orders-show-payment-notice">
+                    <p><strong>Important:</strong> Send the exact amount shown above to the payment address below. The payment status will update automatically once your transaction is confirmed on the network. Refresh this page to check for status updates.</p>
+                </div>
             </div>
         
-            @if(!$order->is_paid)
+            @if(!$order->is_paid && $order->pay_address)
                 <div class="orders-show-payment-card">
                     @if($qrCode)
                         <h2 class="orders-show-payment-subtitle">Scan QR Code</h2>
@@ -183,12 +173,17 @@
                 
                     <h2 class="orders-show-payment-subtitle" style="margin-top: 20px;">Payment Address</h2>
                     <div class="orders-show-payment-address">
-                        {{ $order->payment_address }}
+                        {{ $order->pay_address }}
+                    </div>
+
+                    <div class="orders-show-payment-amount-reminder">
+                        <span class="orders-show-payment-label">Amount:</span>
+                        <span class="orders-show-payment-amount">ɱ{{ number_format($order->pay_amount, 12) }} {{ strtoupper($order->pay_currency ?? 'XMR') }}</span>
                     </div>
                 
                     <div class="orders-show-payment-refresh">
                         <a href="{{ route('orders.show', $order->unique_url) }}" class="orders-show-payment-refresh-btn">
-                            Refresh to check for new transactions
+                            Refresh to check payment status
                         </a>
                     </div>
                 </div>
@@ -226,14 +221,18 @@
                     <div class="orders-show-info-label">Total Items</div>
                     <div class="orders-show-info-value">{{ $totalItems }}</div>
                 </div>
-                <div class="orders-show-info-item">
-                    <div class="orders-show-info-label">XMR/USD Rate</div>
-                    <div class="orders-show-info-value">${{ number_format($order->xmr_usd_rate, 2) }}</div>
-                </div>
-                <div class="orders-show-info-item">
-                    <div class="orders-show-info-label">Monero Amount</div>
-                    <div class="orders-show-info-value total">ɱ{{ number_format($order->required_xmr_amount, 12) }}</div>
-                </div>
+                @if($order->xmr_usd_rate)
+                    <div class="orders-show-info-item">
+                        <div class="orders-show-info-label">XMR/USD Rate</div>
+                        <div class="orders-show-info-value">${{ number_format($order->xmr_usd_rate, 2) }}</div>
+                    </div>
+                @endif
+                @if($order->pay_amount)
+                    <div class="orders-show-info-item">
+                        <div class="orders-show-info-label">Payment Amount</div>
+                        <div class="orders-show-info-value total">ɱ{{ number_format($order->pay_amount, 12) }} {{ strtoupper($order->pay_currency ?? 'XMR') }}</div>
+                    </div>
+                @endif
             </div>
         </div>
     </div>

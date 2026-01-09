@@ -1105,7 +1105,7 @@ class AdminController extends Controller
         }
     }
 
-    public function denyVendorApplication(VendorPayment $application)
+    public function denyVendorApplication(VendorPayment $application, \App\Services\NowPaymentsService $nowPaymentsService)
     {
         if ($application->application_status !== 'waiting') {
             return redirect()->route('admin.vendor-applications.show', $application)
@@ -1140,29 +1140,28 @@ class AdminController extends Controller
             ]);
 
             try {
-                // Initialize WalletRPC with increased timeout
-                $config = config('monero');
-                $walletRPC = new \MoneroIntegrations\MoneroPhp\walletRPC(
-                    $config['host'],
-                    $config['port'],
-                    $config['ssl'],
-                    30000  // 30 second timeout
+                // Use NowPayments Payout API
+                $result = $nowPaymentsService->createPayout(
+                    $returnAddress->monero_address,
+                    $refundAmount,
+                    'xmr',
+                    "Vendor application refund for user {$application->user_id}"
                 );
 
-                // Process refund
-                $result = $walletRPC->transfer([
-                    'address' => $returnAddress->monero_address,
-                    'amount' => $refundAmount,
-                    'priority' => 1
-                ]);
-
-                // Update refund details only if transfer successful
+                // Update refund details
                 $application->update([
                     'refund_amount' => $refundAmount,
                     'refund_address' => $returnAddress->monero_address
                 ]);
 
-                $refundMessage = "Refund of {$refundAmount} XMR has been processed.";
+                if ($result && isset($result['id'])) {
+                    $application->update([
+                        'refund_payout_id' => $result['id']
+                    ]);
+                    $refundMessage = "Refund of {$refundAmount} XMR has been initiated. Payout ID: {$result['id']}";
+                } else {
+                    $refundMessage = "Application denied but automatic refund failed. Refund details saved for manual processing.";
+                }
             } catch (\Exception $e) {
                 Log::error('Error processing refund: ' . $e->getMessage());
                 $refundMessage = "Application denied but refund failed. Please process refund manually.";

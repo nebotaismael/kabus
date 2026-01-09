@@ -50,22 +50,12 @@
                 <div class="become-vendor-payment-info">
                     <div class="become-vendor-payment-details text-center">
                         <p>
-                            <strong>Address:</strong>
+                            <strong>Payment Address:</strong>
                             <span class="become-vendor-payment-address">{{ $vendorPayment->address }}</span>
                         </p>
                         <p>
                             <strong>Required Amount:</strong>
-                            <span class="become-vendor-payment-amount">{{ config('monero.vendor_payment_required_amount') }} XMR</span>
-                        </p>
-                        <p>
-                            <strong>Minimum Transaction Amount:</strong>
-                            <span class="become-vendor-payment-amount">{{ config('monero.vendor_payment_minimum_amount') }} XMR</span>
-                            <br>
-                            <small class="become-vendor-payment-warning">Payments below this amount will be ignored</small>
-                        </p>
-                        <p>
-                            <strong>Total Received:</strong>
-                            <span class="become-vendor-payment-received">{{ number_format($vendorPayment->total_received, 12) }} XMR</span>
+                            <span class="become-vendor-payment-amount">{{ config('monero.vendor_payment_required_amount') }} {{ strtoupper($vendorPayment->pay_currency ?? 'XMR') }}</span>
                         </p>
                         <p>
                             <strong>Status:</strong>
@@ -81,27 +71,28 @@
                                         </a>
                                     </div>
                                 </div>
-                            @elseif($vendorPayment->total_received > 0)
-                                <span class="become-vendor-payment-status become-vendor-payment-status-warning">
-                                    Insufficient Amount
-                                </span>
                             @else
                                 <span class="become-vendor-payment-status become-vendor-payment-status-info">
                                     Awaiting Payment
                                 </span>
                             @endif
                         </p>
+                        @if(!$vendorPayment->payment_completed)
+                            <div class="become-vendor-payment-notice">
+                                <p><strong>Important:</strong> Send the exact amount shown above to the payment address. The payment status will update automatically once your transaction is confirmed on the network.</p>
+                            </div>
+                        @endif
                     </div>
                 </div>
                 @if($qrCodeDataUri && !$vendorPayment->payment_completed)
                     <div class="become-vendor-payment-qr">
-                        <img src="{{ $qrCodeDataUri }}" alt="Monero Address QR Code" class="become-vendor-payment-qr-image">
+                        <img src="{{ $qrCodeDataUri }}" alt="Payment Address QR Code" class="become-vendor-payment-qr-image">
                     </div>
                 @endif
                 @if(!$vendorPayment->payment_completed)
                     <div class="become-vendor-payment-refresh">
                         <a href="{{ route('become.payment') }}" class="become-vendor-payment-btn">
-                            Refresh to check for new transactions
+                            Refresh to check payment status
                         </a>
                     </div>
                 @endif
