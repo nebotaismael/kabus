@@ -19,7 +19,7 @@ class XmrPriceController extends Controller
         // XMR price value whenever you need to change your server's Monero pricing.
         //
         // Uncomment the line below and set your desired XMR price to disable API calls:
-        // return number_format(416.00, 2, '.', ''); // Set your manual XMR price here
+         //return number_format(416.00, 2, '.', ''); // Set your manual XMR price here
         
         return Cache::remember('xmr_price', 240, function () {
             

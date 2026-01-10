@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Pagination\Paginator;
 use Carbon\Carbon;
 use URL;
@@ -22,6 +23,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Fix for MySQL key length issue on older versions
+        Schema::defaultStringLength(191);
         if ($this->app->environment('production')) {
             URL::forceScheme('https');
         }
