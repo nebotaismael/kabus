@@ -1,13 +1,7 @@
-@font-face {
-font-family:'Monogram';
-src:url('../fonts/Monogram.ttf') format('truetype');
-font-weight:normal;
-font-style:normal
-}
+@import url('https://fonts.googleapis.com/css2?family=New+Rocker&display=swap');
 
 body {
-font-family:'Monogram',monospace;
-image-rendering:pixelated;
+font-family:'New Rocker',cursive;
 margin:0;
 padding:0;
 background-color:#121212;
