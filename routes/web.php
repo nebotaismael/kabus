@@ -54,6 +54,10 @@ Route::get('/canary', function () {
     return response()->file(storage_path('app/public/canary.txt'));
 })->name('canary');
 
+// Static pages
+Route::view('/disclaimer', 'disclaimer')->name('disclaimer');
+Route::view('/refund-policy', 'refund-policy')->name('refund-policy');
+
 // -----------------------------------------------------------------------------
 // Routes for Guest Users
 // -----------------------------------------------------------------------------

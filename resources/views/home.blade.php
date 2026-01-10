@@ -182,12 +182,12 @@
 
     @if(count($adSlots) === 0 && count($featuredProducts) === 0)
     <div class="home-welcome-message">
-        <h1 class="home-title">Welcome to Kabus</h1>
+        <h1 class="home-title">Welcome to {{ config('app.name') }}</h1>
     
         <p class="home-text">Dear users,</p>
     
         <p class="home-text">
-            I am excited to announce the official release of Kabus! Our marketplace script is now fully functional and ready for trading.
+            I am excited to announce the official release of {{ config('app.name') }}! Our marketplace is now fully functional and ready for trading.
         </p>
     
         <p class="home-text">
@@ -198,7 +198,7 @@
     
         <ul class="home-list">
             <li>Continuous updates and new feature integrations</li>
-            <li>Your contributions and suggestions are always welcome on our GitHub page (github.com/sukunetsiz/kabus)</li>
+            <li>Your contributions and suggestions are always welcome</li>
         </ul>
     
         <div class="home-important">

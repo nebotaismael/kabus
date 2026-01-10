@@ -1,5 +1,13 @@
+@font-face {
+font-family:'Monogram';
+src:url('../fonts/Monogram.ttf') format('truetype');
+font-weight:normal;
+font-style:normal
+}
+
 body {
-font-family:"Arial",sans-serif;
+font-family:'Monogram',monospace;
+image-rendering:pixelated;
 margin:0;
 padding:0;
 background-color:#121212;
@@ -7,6 +15,11 @@ color:#e0e0e0;
 display:flex;
 flex-direction:column;
 min-height:100vh
+}
+
+h1,h2,h3,h4,h5,h6,input,button {
+font-family:'Monogram',monospace;
+image-rendering:pixelated
 }
 
 html {
@@ -29,13 +42,13 @@ border-radius:6px
 }
 
 ::-webkit-scrollbar-thumb {
-background-color:#bb86fc;
+background-color:#d32f2f;
 border-radius:6px;
 border:3px solid #3c3c3c
 }
 
 ::-webkit-scrollbar-thumb:hover {
-background-color:#96c
+background-color:#b71c1c
 }
 
 .alert {
@@ -87,13 +100,13 @@ width:100%
 }
 
 .auth-login-title {
-color:#bb86fc;
+color:#d32f2f;
 font-size:28px;
 font-weight:700;
 margin-bottom:25px;
 text-align:center;
 padding-bottom:15px;
-border-bottom:2px solid #bb86fc
+border-bottom:2px solid #d32f2f
 }
 
 .auth-login-form-group {
@@ -124,7 +137,7 @@ text-align:center
 
 .auth-login-input:focus {
 outline:none;
-border-color:#bb86fc
+border-color:#d32f2f
 }
 
 .auth-login-captcha-wrapper {
@@ -141,7 +154,7 @@ align-items:center
 
 .auth-login-captcha-label {
 display:block;
-color:#bb86fc;
+color:#d32f2f;
 font-size:16px;
 font-weight:600;
 margin-bottom:15px;
@@ -173,13 +186,13 @@ margin:0 auto
 
 .auth-login-input[name="captcha"]:focus {
 outline:none;
-border-color:#bb86fc
+border-color:#d32f2f
 }
 
 .auth-login-submit-btn {
 width:100%;
 padding:14px 20px;
-background-color:#bb86fc;
+background-color:#d32f2f;
 color:#121212;
 border:none;
 border-radius:8px;
@@ -193,7 +206,7 @@ margin-top:20px
 }
 
 .auth-login-submit-btn:hover {
-background-color:#96c;
+background-color:#b71c1c;
 transform:translateY(-2px)
 }
 
@@ -209,7 +222,7 @@ gap:15px
 
 .auth-login-links a {
 display:inline-block;
-color:#bb86fc;
+color:#d32f2f;
 text-decoration:none;
 font-weight:600;
 transition:all .3s ease;
@@ -218,7 +231,7 @@ border-radius:4px
 }
 
 .auth-login-links a:hover {
-color:#96c;
+color:#b71c1c;
 transform:translateY(-2px)
 }
 
@@ -243,13 +256,13 @@ width:100%
 }
 
 .auth-register-title {
-color:#bb86fc;
+color:#d32f2f;
 font-size:28px;
 font-weight:700;
 margin-bottom:25px;
 text-align:center;
 padding-bottom:15px;
-border-bottom:2px solid #bb86fc
+border-bottom:2px solid #d32f2f
 }
 
 .auth-register-form-group {
@@ -287,7 +300,7 @@ text-align:center
 
 .auth-register-input:focus {
 outline:none;
-border-color:#bb86fc
+border-color:#d32f2f
 }
 
 .auth-register-captcha-wrapper {
@@ -304,7 +317,7 @@ align-items:center
 
 .auth-register-captcha-label {
 display:block;
-color:#bb86fc;
+color:#d32f2f;
 font-size:16px;
 font-weight:600;
 margin-bottom:15px;
@@ -336,13 +349,13 @@ margin:0 auto
 
 .auth-register-input[name="captcha"]:focus {
 outline:none;
-border-color:#bb86fc
+border-color:#d32f2f
 }
 
 .auth-register-submit-btn {
 width:100%;
 padding:14px 20px;
-background-color:#bb86fc;
+background-color:#d32f2f;
 color:#121212;
 border:none;
 border-radius:8px;
@@ -356,7 +369,7 @@ margin-top:20px
 }
 
 .auth-register-submit-btn:hover {
-background-color:#96c;
+background-color:#b71c1c;
 transform:translateY(-2px)
 }
 
@@ -371,7 +384,7 @@ border-top:1px solid #3c3c3c
 
 .auth-register-links a {
 display:inline-block;
-color:#bb86fc;
+color:#d32f2f;
 text-decoration:none;
 font-weight:600;
 transition:all .3s ease;
@@ -380,7 +393,7 @@ border-radius:4px
 }
 
 .auth-register-links a:hover {
-color:#96c;
+color:#b71c1c;
 transform:translateY(-2px)
 }
 
@@ -399,13 +412,13 @@ width:100%
 }
 
 .auth-mnemonic-title {
-color:#bb86fc;
+color:#d32f2f;
 font-size:28px;
 font-weight:700;
 margin-bottom:25px;
 text-align:center;
 padding-bottom:15px;
-border-bottom:2px solid #bb86fc
+border-bottom:2px solid #d32f2f
 }
 
 .auth-mnemonic-warning {
@@ -418,7 +431,7 @@ text-align:center
 }
 
 .auth-mnemonic-warning strong {
-color:#bb86fc;
+color:#d32f2f;
 font-size:18px;
 font-weight:700;
 display:block;
@@ -441,7 +454,7 @@ text-align:center
 }
 
 .auth-mnemonic-words {
-color:#bb86fc;
+color:#d32f2f;
 font-size:18px;
 font-weight:600;
 letter-spacing:1px;
@@ -457,7 +470,7 @@ text-align:center
 .auth-mnemonic-submit-btn {
 width:100%;
 padding:14px 20px;
-background-color:#bb86fc;
+background-color:#d32f2f;
 color:#121212;
 border:none;
 border-radius:8px;
@@ -471,7 +484,7 @@ margin-top:20px
 }
 
 .auth-mnemonic-submit-btn:hover {
-background-color:#96c;
+background-color:#b71c1c;
 transform:translateY(-2px)
 }
 
@@ -490,13 +503,13 @@ width:100%
 }
 
 .auth-forgot-password-title {
-color:#bb86fc;
+color:#d32f2f;
 font-size:28px;
 font-weight:700;
 margin-bottom:25px;
 text-align:center;
 padding-bottom:15px;
-border-bottom:2px solid #bb86fc
+border-bottom:2px solid #d32f2f
 }
 
 .auth-forgot-password-form-group {
@@ -527,7 +540,7 @@ text-align:center
 
 .auth-forgot-password-input:focus {
 outline:none;
-border-color:#bb86fc
+border-color:#d32f2f
 }
 
 .auth-forgot-password-input[name="mnemonic"] {
@@ -543,7 +556,7 @@ text-align:left
 .auth-forgot-password-submit-btn {
 width:100%;
 padding:14px 20px;
-background-color:#bb86fc;
+background-color:#d32f2f;
 color:#121212;
 border:none;
 border-radius:8px;
@@ -557,7 +570,7 @@ margin-top:20px
 }
 
 .auth-forgot-password-submit-btn:hover {
-background-color:#96c;
+background-color:#b71c1c;
 transform:translateY(-2px)
 }
 
@@ -572,7 +585,7 @@ border-top:1px solid #3c3c3c
 
 .auth-forgot-password-links a {
 display:inline-block;
-color:#bb86fc;
+color:#d32f2f;
 text-decoration:none;
 font-weight:600;
 transition:all .3s ease;
@@ -581,7 +594,7 @@ border-radius:4px
 }
 
 .auth-forgot-password-links a:hover {
-color:#96c;
+color:#b71c1c;
 transform:translateY(-2px)
 }
 
@@ -600,13 +613,13 @@ width:100%
 }
 
 .auth-reset-password-title {
-color:#bb86fc;
+color:#d32f2f;
 font-size:28px;
 font-weight:700;
 margin-bottom:25px;
 text-align:center;
 padding-bottom:15px;
-border-bottom:2px solid #bb86fc
+border-bottom:2px solid #d32f2f
 }
 
 .auth-reset-password-form-group {
@@ -637,13 +650,13 @@ text-align:center
 
 .auth-reset-password-input:focus {
 outline:none;
-border-color:#bb86fc
+border-color:#d32f2f
 }
 
 .auth-reset-password-submit-btn {
 width:100%;
 padding:14px 20px;
-background-color:#bb86fc;
+background-color:#d32f2f;
 color:#121212;
 border:none;
 border-radius:8px;
@@ -657,7 +670,7 @@ margin-top:20px
 }
 
 .auth-reset-password-submit-btn:hover {
-background-color:#96c;
+background-color:#b71c1c;
 transform:translateY(-2px)
 }
 
@@ -672,7 +685,7 @@ border-top:1px solid #3c3c3c
 
 .auth-reset-password-links a {
 display:inline-block;
-color:#bb86fc;
+color:#d32f2f;
 text-decoration:none;
 font-weight:600;
 transition:all .3s ease;
@@ -681,7 +694,7 @@ border-radius:4px
 }
 
 .auth-reset-password-links a:hover {
-color:#96c;
+color:#b71c1c;
 transform:translateY(-2px)
 }
 
@@ -700,13 +713,13 @@ width:100%
 }
 
 .auth-banned-title {
-color:#bb86fc;
+color:#d32f2f;
 font-size:28px;
 font-weight:700;
 margin-bottom:25px;
 text-align:center;
 padding-bottom:15px;
-border-bottom:2px solid #bb86fc
+border-bottom:2px solid #d32f2f
 }
 
 .auth-banned-message {
@@ -733,7 +746,7 @@ color:#e0e0e0
 }
 
 .auth-banned-details strong {
-color:#bb86fc;
+color:#d32f2f;
 font-weight:600
 }
 
@@ -758,7 +771,7 @@ border-top:1px solid #3c3c3c
 
 .auth-banned-links a {
 display:inline-block;
-color:#bb86fc;
+color:#d32f2f;
 text-decoration:none;
 font-weight:600;
 transition:all .3s ease;
@@ -767,7 +780,7 @@ border-radius:4px
 }
 
 .auth-banned-links a:hover {
-color:#96c;
+color:#b71c1c;
 transform:translateY(-2px)
 }
 
@@ -786,13 +799,13 @@ width:100%
 }
 
 .auth-two-fa-title {
-color:#bb86fc;
+color:#d32f2f;
 font-size:28px;
 font-weight:700;
 margin-bottom:20px;
 text-align:center;
 padding-bottom:15px;
-border-bottom:2px solid #bb86fc
+border-bottom:2px solid #d32f2f
 }
 
 .auth-two-fa-content {
@@ -808,7 +821,7 @@ margin-bottom:20px
 }
 
 .auth-two-fa-message-title {
-color:#bb86fc;
+color:#d32f2f;
 font-size:16px;
 font-weight:600;
 margin-bottom:10px;
@@ -871,7 +884,7 @@ min-height:45px
 
 .auth-two-fa-textarea:focus {
 outline:none;
-border-color:#bb86fc
+border-color:#d32f2f
 }
 
 .auth-two-fa-submit-group {
@@ -881,7 +894,7 @@ margin-top:20px
 .auth-two-fa-submit-btn {
 width:100%;
 padding:14px 20px;
-background-color:#bb86fc;
+background-color:#d32f2f;
 color:#121212;
 border:none;
 border-radius:8px;
@@ -894,7 +907,7 @@ letter-spacing:1px
 }
 
 .auth-two-fa-submit-btn:hover {
-background-color:#96c;
+background-color:#b71c1c;
 transform:translateY(-2px)
 }
 
@@ -909,7 +922,7 @@ border-top:1px solid #3c3c3c
 
 .auth-two-fa-links a {
 display:inline-block;
-color:#bb86fc;
+color:#d32f2f;
 text-decoration:none;
 font-weight:600;
 transition:all .3s ease;
@@ -918,6 +931,183 @@ border-radius:4px
 }
 
 .auth-two-fa-links a:hover {
-color:#96c;
+color:#b71c1c;
 transform:translateY(-2px)
+}
+
+
+/* Hecate Market Auth Redesign */
+.hecate-login-box {
+border:3px solid #d32f2f;
+background-color:#000000;
+border-radius:12px;
+padding:30px;
+max-width:500px;
+margin:20px auto;
+box-shadow:0 0 20px rgba(211,47,47,0.3)
+}
+
+.hecate-security-header {
+text-align:center;
+margin-bottom:25px;
+padding-bottom:15px;
+border-bottom:2px solid #d32f2f
+}
+
+.hecate-security-header h2 {
+color:#d32f2f;
+font-size:24px;
+font-weight:700;
+text-transform:uppercase;
+letter-spacing:2px;
+margin:0 0 10px 0
+}
+
+.hecate-security-header .security-badge {
+display:inline-block;
+background-color:#1a1a1a;
+border:1px solid #d32f2f;
+color:#d32f2f;
+padding:5px 15px;
+border-radius:20px;
+font-size:12px;
+font-weight:600;
+text-transform:uppercase;
+letter-spacing:1px
+}
+
+.hecate-input-minimal {
+width:100%;
+padding:12px 0;
+background:transparent;
+border:none;
+border-bottom:2px solid #d32f2f;
+color:#e0e0e0;
+font-size:15px;
+transition:all .3s ease;
+box-sizing:border-box;
+text-align:center;
+border-radius:0
+}
+
+.hecate-input-minimal:focus {
+outline:none;
+border-bottom-color:#ff5252;
+box-shadow:0 2px 0 0 rgba(211,47,47,0.5)
+}
+
+.hecate-input-minimal::placeholder {
+color:#666
+}
+
+.hecate-captcha-terminal {
+background-color:#000000;
+border:2px solid #935300;
+border-radius:8px;
+padding:15px;
+max-width:240px;
+margin:0 auto;
+display:flex;
+flex-direction:column;
+align-items:center
+}
+
+.hecate-captcha-terminal .captcha-label {
+color:#935300;
+font-family:"Courier New",monospace;
+font-size:14px;
+font-weight:600;
+margin-bottom:10px;
+text-transform:uppercase;
+letter-spacing:2px
+}
+
+.hecate-captcha-terminal .captcha-image {
+display:block;
+margin:0 auto 15px;
+border-radius:4px;
+border:2px solid #935300;
+background-color:#0a0a0a
+}
+
+.hecate-captcha-terminal .captcha-input {
+width:80px;
+padding:8px;
+background-color:#0a0a0a;
+border:2px solid #935300;
+color:#935300;
+font-family:"Courier New",monospace;
+font-size:14px;
+text-align:center;
+border-radius:4px
+}
+
+.hecate-captcha-terminal .captcha-input:focus {
+outline:none;
+box-shadow:0 0 10px rgba(0,255,0,0.3)
+}
+
+.hecate-form-group {
+margin-bottom:20px
+}
+
+.hecate-label {
+display:block;
+color:#d32f2f;
+font-size:14px;
+font-weight:600;
+margin-bottom:8px;
+text-align:center;
+text-transform:uppercase;
+letter-spacing:1px
+}
+
+.hecate-submit-btn {
+width:100%;
+padding:14px 20px;
+background-color:#d32f2f;
+color:#000000;
+border:none;
+border-radius:4px;
+font-size:16px;
+font-weight:700;
+cursor:pointer;
+transition:all .3s ease;
+text-transform:uppercase;
+letter-spacing:2px;
+margin-top:20px
+}
+
+.hecate-submit-btn:hover {
+background-color:#ff5252;
+transform:translateY(-2px);
+box-shadow:0 4px 15px rgba(211,47,47,0.4)
+}
+
+.hecate-links {
+display:flex;
+justify-content:center;
+align-items:center;
+margin-top:20px;
+padding-top:15px;
+border-top:1px solid #333;
+gap:15px
+}
+
+.hecate-links a {
+color:#d32f2f;
+text-decoration:none;
+font-weight:600;
+font-size:14px;
+transition:all .3s ease
+}
+
+.hecate-links a:hover {
+color:#ff5252;
+text-shadow:0 0 10px rgba(211,47,47,0.5)
+}
+
+.hecate-links-separator {
+color:#666;
+font-size:14px
 }

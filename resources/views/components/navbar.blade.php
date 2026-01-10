@@ -22,7 +22,7 @@
                     @endauth
                     <span class="navbar-brand-gap">
                         <a href="{{ route('home') }}" class="navbar-logo-link">
-                            <img src="{{ asset('images/kabus.png') }}" alt="Logo" class="navbar-brand-logo">
+                            <img src="{{ asset('images/hecate.png') }}" alt="Logo" class="navbar-brand-logo">
                         </a>
                     </span>
                     @auth

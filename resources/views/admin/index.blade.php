@@ -8,7 +8,7 @@
         <p class="a-v-panel-welcome">Welcome to the Admin Panel. Here you can manage various aspects of {{ config('app.name') }}.</p>
         
         <div class="a-v-panel-grid">
-            <div class="a-v-panel-item">
+            <div class="a-v-panel-item a-v-panel-item-important">
                 <h3 class="a-v-panel-item-title">User Management</h3>
                 <p class="a-v-panel-item-description">View and manage user accounts, roles, and permissions.</p>
                 <a href="{{ route('admin.users') }}" class="a-v-panel-item-link">Manage Users</a>
@@ -32,7 +32,7 @@
                 <a href="{{ route('admin.bulk-message.list') }}" class="a-v-panel-item-link">Send Message</a>
             </div>
 
-            <div class="a-v-panel-item">
+            <div class="a-v-panel-item a-v-panel-item-important">
                 <h3 class="a-v-panel-item-title">Disputes</h3>
                 <p class="a-v-panel-item-description">View and respond to user disputes for both sides.</p>
                 <a href="{{ route('admin.disputes.index') }}" class="a-v-panel-item-link">View Disputes</a>

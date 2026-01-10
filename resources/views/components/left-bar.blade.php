@@ -1,53 +1,28 @@
 <div class="left-bar">
     <ul>
-        <li>
-            <a href="{{ route('wishlist.index') }}" class="{{ request()->routeIs('wishlist.*') ? 'active' : '' }}">
-                <img src="{{ asset('icons/wishlist.png') }}" alt="Wishlist" class="left-bar-right-bar-icon left-bar-icon">
-                Wishlist
-            </a>
-        </li>
-        <li>
-            <a href="{{ route('products.index') }}" class="{{ request()->routeIs('products.*') ? 'active' : '' }}">
-                <img src="{{ asset('icons/products.png') }}" alt="Products" class="left-bar-right-bar-icon left-bar-icon">
-                Products
-            </a>
-        </li>
-        <li>
-            <a href="{{ route('orders.index') }}" class="{{ request()->routeIs('orders.*') ? 'active' : '' }}">
-                <img src="{{ asset('icons/orders.png') }}" alt="Orders" class="left-bar-right-bar-icon left-bar-icon">
-                Orders
-            </a>
-        </li>
-        <li>
-            <a href="{{ route('return-addresses.index') }}" class="{{ request()->routeIs('return-addresses.*') ? 'active' : '' }}">
-                <img src="{{ asset('icons/return-addresses.png') }}" alt="Addresses" class="left-bar-right-bar-icon left-bar-icon">
-                Addresses
-            </a>
-        </li>
-        <li>
-            <a href="{{ route('vendors.index') }}" class="{{ request()->routeIs('vendors.*') ? 'active' : '' }}">
-                <img src="{{ asset('icons/vendors.png') }}" alt="Vendors" class="left-bar-right-bar-icon left-bar-icon">
-                Vendors
-            </a>
-        </li>
-        <li>
-            <a href="{{ route('become.vendor') }}" class="{{ request()->routeIs('become.*') ? 'active' : '' }}">
-                <img src="{{ asset('icons/become-vendor.png') }}" alt="Become Vendor" class="left-bar-right-bar-icon left-bar-icon">
-                Be a Vendor
-            </a>
-        </li>
-        <li>
-            <a href="{{ route('references.index') }}" class="{{ request()->routeIs('references.*') ? 'active' : '' }}">
-                <img src="{{ asset('icons/references.png') }}" alt="References" class="left-bar-right-bar-icon left-bar-icon">
-                References
-            </a>
-        </li>
-        <li>
-            <a href="{{ route('disputes.index') }}" class="{{ request()->routeIs('disputes.*') ? 'active' : '' }}">
-                <img src="{{ asset('icons/disputes.png') }}" alt="Disputes" class="left-bar-right-bar-icon left-bar-icon">
-                Disputes
-            </a>
-        </li>
+        @php
+            $menuItems = [
+                ['route' => 'wishlist.index', 'routeIs' => 'wishlist.*', 'icon' => 'wishlist.png', 'alt' => 'Wishlist', 'label' => 'Wishlist'],
+                ['route' => 'products.index', 'routeIs' => 'products.*', 'icon' => 'products.png', 'alt' => 'Products', 'label' => 'Products'],
+                ['route' => 'orders.index', 'routeIs' => 'orders.*', 'icon' => 'orders.png', 'alt' => 'Orders', 'label' => 'Orders'],
+                ['route' => 'return-addresses.index', 'routeIs' => 'return-addresses.*', 'icon' => 'return-addresses.png', 'alt' => 'Addresses', 'label' => 'Addresses'],
+                ['route' => 'vendors.index', 'routeIs' => 'vendors.*', 'icon' => 'vendors.png', 'alt' => 'Vendors', 'label' => 'Vendors'],
+                ['route' => 'become.vendor', 'routeIs' => 'become.*', 'icon' => 'become-vendor.png', 'alt' => 'Become Vendor', 'label' => 'Be a Vendor'],
+                ['route' => 'references.index', 'routeIs' => 'references.*', 'icon' => 'references.png', 'alt' => 'References', 'label' => 'References'],
+                ['route' => 'disputes.index', 'routeIs' => 'disputes.*', 'icon' => 'disputes.png', 'alt' => 'Disputes', 'label' => 'Disputes'],
+            ];
+            shuffle($menuItems);
+        @endphp
+
+        @foreach($menuItems as $item)
+            <li>
+                <a href="{{ route($item['route']) }}" class="{{ request()->routeIs($item['routeIs']) ? 'active' : '' }}">
+                    <img src="{{ asset('icons/' . $item['icon']) }}" alt="{{ $item['alt'] }}" class="left-bar-right-bar-icon left-bar-icon">
+                    {{ $item['label'] }}
+                </a>
+            </li>
+        @endforeach
+
         @if(auth()->user()->isAdmin())
         <li>
             <a href="{{ route('admin.index') }}" class="{{ request()->routeIs('admin.*') ? 'active' : '' }}">

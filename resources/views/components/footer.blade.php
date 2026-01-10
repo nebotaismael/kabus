@@ -2,6 +2,7 @@
     <div class="footer-container">
         <div class="footer-content">
             <a href="{{ route('pgp-key') }}" class="footer-button">PGP Key</a>
+            <a href="{{ route('disclaimer') }}" class="footer-button">Disclaimer</a>
             @if(config('marketplace.show_javascript_warning'))
                 <div class="footer-javascript-warning-left js-warning-elements">
                     <span class="footer-javascript-warning-text-left">Please Disable JavaScript</span>
@@ -27,6 +28,7 @@
                     <img src="{{ asset('images/javascript-warning.gif') }}" alt="JavaScript Warning" class="footer-javascript-warning-gif">
                 </div>
             @endif
+            <a href="{{ route('refund-policy') }}" class="footer-button">Refund Policy</a>
             <a href="{{ route('canary') }}" class="footer-button">Canary</a>
         </div>
     </div>

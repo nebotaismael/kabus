@@ -230,7 +230,7 @@
 
                 <h2 class="guides-general-section-title">[----[7] HOW TO BUY MONERO [7]----]</h2>
                 
-                <p>Monero (XMR) is the main currency used in the Kabus Marketplace Script and is used for all transactions. In this guide, I'll show you three methods to buy Monero.</p>
+                <p>Monero (XMR) is the main currency used in {{ config('app.name') }} and is used for all transactions. In this guide, I'll show you three methods to buy Monero.</p>
 
                 <h3 class="guides-general-subtitle">[----BUYING THROUGH CENTRALIZED EXCHANGES (CEX)----]</h3>
                 
