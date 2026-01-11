@@ -12,17 +12,11 @@
     <div class="hecate-status-ticker">
         Hecate Market Status: <span class="status-online">Online</span>
     </div>
-    <div class="content-wrapper">
-        @auth
-            @include('components.left-bar')
-        @endauth
-        <main class="main-content">
+    <div class="content-wrapper content-wrapper-full">
+        <main class="main-content main-content-full">
             @include('components.alerts')
             @yield('content')
         </main>
-        @auth
-            @include('components.right-bar')
-        @endauth
     </div>
     
     @include('components.footer')

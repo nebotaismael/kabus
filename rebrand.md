@@ -1,149 +1,134 @@
-Here is the comprehensive **Context Document** designed for an AI agent (like GitHub Copilot) to execute the rebranding of the **Kabus** marketplace to **Hecate Market**.
+Based on the detailed transcripts, video analysis, and your previous files, here is the updated **Master Context Document** for Project Hecate.
 
-### **Context Document: Project "Hecate Market" Rebranding**
-
-**Objective:**
-Rebrand the existing Laravel-based "Kabus" marketplace to **"Hecate Market"**. This involves a complete visual overhaul (Purple to Red), name changes, font updates, and structural modifications to the Auth pages, Dashboards, and Footer.
+This document integrates the technical backend requirements (NowPayments) with the **major UI/UX overhaul** requested in the voice notes to differentiate the site from "Inferno."
 
 ---
 
-### **1. Global Configuration & Branding**
+# 🤖 AI Agent Context Document: Project Hecate (Updated)
 
-**Target:** Rename the application globally.
+**Project Description:**
+We are rebranding and restructuring the "Kabus" Monero marketplace into **"Hecate"**. The goal is to create a distinct visual identity that differs significantly from the default script (used by the competitor "Inferno").
 
-* **File:** `.env` (and `.env.example`)
-* **Action:** Change `APP_NAME=Kabus` to `APP_NAME="Hecate Market"`.
+**Core Constraints:**
 
-
-* **File:** `config/app.php`
-* **Action:** Ensure `'name' => env('APP_NAME', 'Hecate Market'),` is set default.
-
-
-* **File:** `resources/views/layouts/app.blade.php`
-* **Action:** Update the `<title>` tag logic if hardcoded.
-* **Action:** Replace the favicon link `<link rel="icon" ... href="{{ asset('images/kabus.png') }}">` with a new Hecate icon.
-
-
+* **No JavaScript:** All UI changes (dropdowns, tabs) must rely on CSS (`:hover`, `:focus`, checkbox hacks) or server-side rendering.
+* **differentiation:** The layout must **not** look like the default Kabus script.
 
 ---
 
-### **2. Visual Theme & CSS (The "Red" Shift)**
+## 🎨 Phase 1: UI/UX Structural Overhaul (Priority High)
 
-**Target:** Replace the current primary "Purple" theme (`#bb86fc`) with a "Red" theme (e.g., `#ff0000` or `#d32f2f`) and update typography.
+*References: Audio 7.22.15 PM, 7.22.16 PM, 7.22.17 PM, 7.22.18 PM*
 
-* **File:** `public/css/styles.css` & `public/css/auth.css`
-* **Color Replacement Strategy:**
-* Find all instances of **`#bb86fc`** (Primary Purple) and replace with **`#d32f2f`** (Hecate Red).
-* Find **`#96c`** (Hover Purple) and replace with **`#b71c1c`** (Darker Red).
-* Find **`#3c3c3c`** (Borders/Backgrounds) -> Keep as is, or darken to `#2c2c2c` for higher contrast with red.
+### 1. Header & Top Bar Transformation
+
+**Goal:** Create a taller, more feature-rich header to "overshadow" the competitor's design.
+
+* **Files:** `resources/views/layouts/app.blade.php`, `public/css/styles.css`
+* **Requirements:**
+* **Dimensions:** Increase the height/padding of the Top Bar significantly.
+* **Logo:** Position at the **far left edge**.
+* **Main Navigation:** Move "Home", "Become a Vendor", "Messages", "Support", and "Orders" into the header (next to the logo). *Do not hide these in a sidebar.*
+* **Icons (Cart & Notification):**
+* **Remove Borders:** Remove the circular background/border around these icons. They should be free-floating icons.
 
 
-* **Font Replacement:**
-* **Current:** `font-family: "Arial", sans-serif;`
-* **Action:** Change to a unique font stack.
-* *Suggestion:* `font-family: "Verdana", "Geneva", sans-serif;` or import a Google Font (e.g., *Roboto* or *Lato*) in `layouts/app.blade.php` and apply it here.
-
-
-* **Specific Classes to Modify:**
-* `.navbar` (border-bottom)
-* `.navbar-btn`, `.navbar-icon-btn` (borders/active states)
-* `.footer` (border-top)
-* `.dashboard-card-title`, `.a-v-panel-title` (text colors)
-* `::-webkit-scrollbar-thumb` (scrollbar color)
+* **Styling:** Ensure it doesn't look "plain." Use the new Hecate color palette (Dark Grey/Purple).
 
 
 
+### 2. Sidebar Removal & User Menu
 
+**Goal:** Widen the main content area to fit more products.
 
----
-
-### **3. Authentication Pages (Login & Register)**
-
-**Target:** Redesign to look unique and "secure".
-
-* **File:** `resources/views/auth/login.blade.php`
-* **Design Overhaul:**
-* Wrap the form in a new container class `.hecate-login-box` styled with a thick Red border and a dark background (`#000000`).
-* **Security Step Visuals:** Add a visual "Security Check" header above the form (e.g., "Verifying Connection..." static text or icon) to mimic the "security steps" mentioned.
-* **Input Fields:** Change inputs to be transparent with only a bottom red border (`border-bottom: 2px solid #d32f2f;`) instead of the current full box.
+* **Files:** `resources/views/components/left-bar.blade.php`, `resources/views/components/navbar.blade.php`
+* **Action:** **Remove the User Sidebar completely** (the left column containing Dashboard, Settings, Account, etc.).
+* **Implementation:**
+* Move these links (Dashboard, Settings, Account, Logout) into a **CSS-only Dropdown Menu** located under the User's Profile Name in the Header.
+* *Reference:* See "Venom" and "Inferno" logic—user controls belong in a dropdown, not a side column.
 
 
 
+### 3. Homepage Layout Restructuring
 
-* **File:** `resources/views/auth/register.blade.php`
-* **Action:** Mirror the design changes from Login.
-* **Captcha:** Style the `.auth-register-captcha-wrapper` to look like a "Terminal" command prompt (green text on black background, monospace font) to differ from the standard look.
+**Goal:** Mimic the "Inferno" density (3 rows) but with better organization.
+
+* **Files:** `resources/views/home.blade.php`, `resources/views/components/products.blade.php`
+* **Grid Layout:**
+* With the sidebar removed, expand the **Featured Products** container to full width.
+* Force the product grid to display **3 items per row** (CSS Grid/Flexbox).
+
+
+* **Section Reordering:**
+* **Top:** Header/Nav.
+* **Middle (Left):** Add a *new* "Product Categories" list (since the competitor doesn't have this, it adds differentiation).
+* **Middle (Center/Right):** Featured Products Grid.
+* **Bottom:** Move the **"Recent Sales"** section to the very bottom of the page (just above the footer).
 
 
 
 ---
 
-### **4. Dashboard Customization**
+## 💳 Phase 2: NowPayments Integration (Backend)
 
-**Target:** Blend with Red theme and modify layout structure for User, Vendor, and Admin.
+*References: nowpay.md, Audio 7.17.24 PM*
 
-* **Global Layout:** `resources/views/layouts/app.blade.php`
-* **Action:** Add a persistent "Hecate Market Status: Online" ticker or bar at the top of the body to distinguish the dashboard look.
+### 1. Service Implementation
 
-
-* **User Dashboard:** `resources/views/dashboard.blade.php`
-* **Action:** Change the `.dashboard-grid` layout. Move the "Profile Information Card" from the left sidebar to a horizontal banner at the top of the content area.
-* **Style:** Apply a "glassmorphism" effect or a subtle red glow (`box-shadow: 0 0 15px rgba(211, 47, 47, 0.2);`) to `.dashboard-card`.
-
-
-* **Admin Panel:** `resources/views/admin/index.blade.php`
-* **Action:** Change the grid columns. Instead of `repeat(auto-fit, minmax(250px, 1fr))`, make important cards (like "User Management" and "Disputes") double-width for emphasis.
-* **Icons:** Replace the current SVG/PNG icons in `.a-v-panel-item` with FontAwesome icons (if available) or CSS-only shapes colored Red.
-
-
-* **Vendor Panel:** `resources/views/vendor/index.blade.php`
-* **Action:** Rename "Vendor Panel" to "Hecate Merchant Command".
-* **Layout:** Group "Products" actions (Add Digital, Cargo, Dead Drop) into a single "Product Management" section with a dropdown or tabs, rather than separate cards, to declutter the interface.
+* **File:** `app/Services/NowPaymentsService.php`
+* **Task:** Complete the `createPayment` and `getPaymentStatus` methods using the NowPayments API.
+* **Logic:**
+* Generate a deposit address (BTC/LTC/ETH) for the order.
+* Store the `payment_id` in the `orders` table (ensure migration `2026_01_09` is run).
 
 
 
----
+### 2. Webhook Handling
 
-### **5. Footer & New Pages**
-
-**Target:** Unique footer with Disclaimer and Refund Policy.
-
-* **File:** `resources/views/components/footer.blade.php`
-* **Action:** Remove the "Javascript Warning" if strictly not needed, or restyle it to be less intrusive.
-* **Add Links:** Add HTML links for Disclaimer and Refund Policy:
-```html
-<a href="{{ route('disclaimer') }}" class="footer-button">Disclaimer</a>
-<a href="{{ route('refund-policy') }}" class="footer-button">Refund Policy</a>
-
-```
-
-
-
-
-* **New Files to Create:**
-* `resources/views/disclaimer.blade.php`: Create a static blade file extending `layouts.app` containing standard market disclaimer text.
-* `resources/views/refund-policy.blade.php`: Create a static blade file with the refund terms.
-
-
-* **File:** `routes/web.php`
-* **Action:** Register the new routes:
-```php
-Route::view('/disclaimer', 'disclaimer')->name('disclaimer');
-Route::view('/refund-policy', 'refund-policy')->name('refund-policy');
-
-```
-
-
+* **File:** `app/Http/Controllers/WebhookController.php`
+* **Task:** Handle IPN callbacks.
+* On `finished`: Mark order as `PAID`.
+* On `partially_paid`: Notify user/admin (do not release goods).
 
 
 
 ---
 
-### **6. Asset & Image Branding**
+## 🛠️ Phase 3: Specific Client Tweaks
 
-* **File:** `resources/views/components/navbar.blade.php`
-* **Logo:** Update `<img src="{{ asset('images/kabus.png') }}" ...>` to point to a new logo file (e.g., `hecate.png`).
+*References: Audio 7.25.37 PM, 7.22.18 PM*
+
+1. **Vendor Fee Config:**
+* Add a field in the Admin Panel settings to adjust the "Become Vendor" fee (USD value) dynamically.
 
 
-* **Folder:** `public/images/`
-* **Action:** The agent needs to know that new branding images (Logo, Favicon, Hero banner) must be uploaded to replace `kabus.png`.
+2. **Captcha:**
+* File: `config/captcha.php`
+* Action: Simplify the math problem difficulty or increase user tolerance.
+
+
+3. **Vendor Dashboard:**
+* Display "Total Sales" in **USD** (converted from XMR) alongside the XMR value.
+
+
+
+---
+
+## 📂 Critical File List for AI
+
+When asking the AI to code, point it to these specific files first:
+
+1. **Frontend/Layout:**
+* `resources/views/layouts/app.blade.php` (Master layout)
+* `resources/views/home.blade.php` (Homepage structure)
+* `public/css/styles.css` (Global styles)
+* `resources/views/components/navbar.blade.php` (Nav items)
+
+
+2. **Backend/Logic:**
+* `app/Services/NowPaymentsService.php`
+* `routes/web.php`
+
+
+3. **Config:**
+* `config/marketplace.php` (Site settings)
