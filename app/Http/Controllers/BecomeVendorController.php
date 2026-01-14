@@ -122,13 +122,13 @@ class BecomeVendorController extends Controller
     private function createVendorPayment(User $user, NowPaymentsService $nowPaymentsService)
     {
         try {
-            // Get the required vendor payment amount from config
-            $requiredAmount = config('monero.vendor_payment_required_amount', 0.4);
+            // Get the required vendor payment amount in USD from config
+            $requiredAmountUsd = config('marketplace.vendor_fee_usd', 250);
             
-            // Create payment via NowPayments
+            // Create payment via NowPayments with USD pricing
             $paymentResult = $nowPaymentsService->createPayment(
-                $requiredAmount,
-                'xmr',  // Price in XMR
+                $requiredAmountUsd,
+                'usd',  // Price in USD
                 'xmr',  // Pay in XMR
                 null,   // Will use identifier as order_id
                 'vendor_fee'
@@ -150,8 +150,8 @@ class BecomeVendorController extends Controller
             // Update the identifier to be used as order_id for webhook matching
             // Re-create payment with the identifier as order_id
             $paymentResult = $nowPaymentsService->createPayment(
-                $requiredAmount,
-                'xmr',
+                $requiredAmountUsd,
+                'usd',
                 'xmr',
                 $vendorPayment->identifier,
                 'vendor_fee'

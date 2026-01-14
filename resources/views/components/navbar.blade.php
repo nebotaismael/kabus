@@ -18,10 +18,12 @@
                         <img src="{{ asset('icons/products.png') }}" alt="Products" class="navbar-nav-icon">
                         Products
                     </a>
+                    @if(!auth()->user()->isVendor())
                     <a href="{{ route('become.vendor') }}" class="navbar-nav-link {{ request()->routeIs('become.*') ? 'active' : '' }}">
                         <img src="{{ asset('icons/become-vendor.png') }}" alt="Become Vendor" class="navbar-nav-icon">
                         Become Vendor
                     </a>
+                    @endif
                     <a href="{{ route('messages.index') }}" class="navbar-nav-link {{ request()->routeIs('messages.*') ? 'active' : '' }}">
                         <img src="{{ asset('icons/messages.png') }}" alt="Messages" class="navbar-nav-icon">
                         Messages

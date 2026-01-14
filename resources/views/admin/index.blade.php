@@ -73,6 +73,12 @@
                 <p class="a-v-panel-item-description">Access platform analytics and performance metrics dashboards.</p>
                 <a href="{{ route('admin.statistics') }}" class="a-v-panel-item-link">View Stats</a>
             </div>
+
+            <div class="a-v-panel-item">
+                <h3 class="a-v-panel-item-title">Search Terms</h3>
+                <p class="a-v-panel-item-description">Track and analyze user search queries across the platform.</p>
+                <a href="{{ route('admin.search-terms') }}" class="a-v-panel-item-link">View Searches</a>
+            </div>
         </div>
     </div>
 </div>

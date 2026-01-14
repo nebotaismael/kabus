@@ -6,7 +6,7 @@
     <div class="become-vendor-index-card">
         <h1 class="become-vendor-index-title">Become a Vendor</h1>
         
-        <p class="become-vendor-index-text">You can also sell on {{ config('app.name') }}! The process involves paying a vendor fee and submitting an application for review. Your application will be carefully reviewed by our administrators.</p>
+        <p class="become-vendor-index-text">You can also sell on {{ config('app.name') }}! The process involves paying a vendor fee of <strong>${{ number_format(config('marketplace.vendor_fee_usd', 250), 2) }} USD</strong> and submitting an application for review. Your application will be carefully reviewed by our administrators.</p>
         
         <p class="become-vendor-index-text">Before proceeding, make sure you have thoroughly read <a href="{{ route('rules') }}" class="become-vendor-index-link">{{ config('app.name') }}'s rules</a>. We have zero tolerance for prohibited products. The payment process is irreversible, and no refunds will be made. If you accept these terms and site rules, you may proceed with your application.</p>
         
@@ -26,10 +26,10 @@
             <div class="become-vendor-index-highlight" role="alert">
                 <img src="{{ asset('images/information.png') }}" alt="Information" class="become-vendor-index-info-icon">
                 <div class="become-vendor-index-highlight-content">
-                    <h4 class="become-vendor-index-highlight-heading">Monero Return Address Required!</h4>
-                    <p class="become-vendor-index-highlight-text">You must add at least one Monero return address before becoming a vendor. This is required to ensure secure and reliable payment processing.</p>
+                    <h4 class="become-vendor-index-highlight-heading">Return Address Required!</h4>
+                    <p class="become-vendor-index-highlight-text">You must add at least one return address before becoming a vendor. This is required to ensure secure and reliable payment processing.</p>
                     <hr class="become-vendor-index-divider">
-                    <p class="become-vendor-index-highlight-text become-vendor-index-mb-0">Please visit your Addresses page to add a Monero return address first.</p>
+                    <p class="become-vendor-index-highlight-text become-vendor-index-mb-0">Please visit your Addresses page to add a return address first.</p>
                 </div>
             </div>
         @endif

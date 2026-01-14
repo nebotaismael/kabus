@@ -6,6 +6,7 @@ use Illuminate\Database\Seeder;
 use App\Models\User;
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\FeaturedProduct;
 use Illuminate\Support\Facades\Log;
 
 class ProductSeeder extends Seeder
@@ -329,5 +330,50 @@ class ProductSeeder extends Seeder
         $this->command->info("Product seeding completed.");
         $this->command->info("Successfully created products: {$successCount}");
         $this->command->info("Failed operations: {$errorCount}");
+
+        // Create featured products
+        $this->createFeaturedProducts();
+    }
+
+    /**
+     * Create featured products from existing products
+     */
+    private function createFeaturedProducts(): void
+    {
+        $this->command->info('Creating featured products...');
+
+        // Get admin user (first user with admin role)
+        $admin = User::whereHas('roles', function ($query) {
+            $query->where('name', 'admin');
+        })->first();
+
+        if (!$admin) {
+            $this->command->warn('No admin user found. Skipping featured products creation.');
+            return;
+        }
+
+        // Get random products to feature (up to 4)
+        $productsToFeature = Product::inRandomOrder()->take(4)->get();
+
+        if ($productsToFeature->isEmpty()) {
+            $this->command->warn('No products found to feature.');
+            return;
+        }
+
+        $featuredCount = 0;
+        foreach ($productsToFeature as $product) {
+            try {
+                FeaturedProduct::create([
+                    'product_id' => $product->id,
+                    'admin_id' => $admin->id,
+                ]);
+                $featuredCount++;
+                $this->command->info("Featured product: {$product->name}");
+            } catch (\Exception $e) {
+                $this->command->error("Error featuring product {$product->name}: " . $e->getMessage());
+            }
+        }
+
+        $this->command->info("Created {$featuredCount} featured products.");
     }
 }

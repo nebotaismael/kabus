@@ -71,6 +71,65 @@
         
         {{-- Main Content Area --}}
         <div class="home-main-content">
+            {{-- Top Vendors Section --}}
+            @if($topVendors->isNotEmpty())
+            <div class="home-top-vendors">
+                <h2 class="home-section-title">🔥 Top Vendors 🔥</h2>
+                <div class="home-vendors-grid">
+                    @foreach($topVendors as $vendor)
+                        <a href="{{ route('vendors.show', $vendor->username) }}" class="home-vendor-card">
+                            <div class="home-vendor-avatar">
+                                <img src="{{ $vendor->profile?->profile_picture_url ?? asset('images/default-profile-picture.png') }}" 
+                                     alt="{{ $vendor->username }}">
+                            </div>
+                            <div class="home-vendor-info">
+                                <span class="home-vendor-username">{{ $vendor->username }}</span>
+                                <span class="home-vendor-level">Level {{ $vendor->level }}</span>
+                                <span class="home-vendor-deals">DEALS {{ $vendor->deals_count }}</span>
+                                <span class="home-vendor-rating">
+                                    RATING {{ $vendor->rating ? number_format($vendor->rating, 2) . '★' : '—' }}
+                                </span>
+                            </div>
+                        </a>
+                    @endforeach
+                </div>
+                <a href="{{ route('vendors.index') }}" class="home-all-vendors-link">▼ All Vendors ▼</a>
+            </div>
+            @endif
+
+            {{-- Search Bar Section --}}
+            <div class="home-search-section">
+                <form action="{{ route('products.index') }}" method="GET" class="home-search-form">
+                    <div class="home-search-filters">
+                        <input type="text" name="vendor" placeholder="Search vendor 🔎" class="home-search-input">
+                        <select name="type" class="home-search-select">
+                            <option value="">All Types</option>
+                            <option value="digital">Digital</option>
+                            <option value="cargo">Cargo</option>
+                            <option value="deaddrop">Dead Drop</option>
+                        </select>
+                        <select name="category" class="home-search-select">
+                            <option value="">All Categories</option>
+                            @foreach($categories as $category)
+                                <option value="{{ $category->id }}">{{ $category->name }}</option>
+                            @endforeach
+                        </select>
+                        <select name="sort_price" class="home-search-select">
+                            <option value="">Most Recent</option>
+                            <option value="asc">Price: Low to High</option>
+                            <option value="desc">Price: High to Low</option>
+                        </select>
+                    </div>
+                    <div class="home-search-main">
+                        <input type="text" name="search" placeholder="Search by product title 🔎" class="home-search-main-input">
+                    </div>
+                    <div class="home-search-actions">
+                        <a href="{{ route('home') }}" class="home-search-reset">Reset Filters</a>
+                        <button type="submit" class="home-search-submit">Apply Filters</button>
+                    </div>
+                </form>
+            </div>
+
             @if(count($adSlots) > 0)
                 <div class="home-highlight-title-wrapper">
                     <h2 class="home-highlight-heading">Advertised Products</h2>
@@ -273,16 +332,29 @@
         </div>
     </div>
     
-    {{-- Recent Sales Section (moved to bottom) --}}
-    @if(isset($recentSales) && count($recentSales) > 0)
-    <div class="home-recent-sales">
-        <h2 class="home-recent-sales-title">Recent Sales</h2>
-        <div class="home-recent-sales-list">
-            @foreach($recentSales as $sale)
-                <div class="home-recent-sale-item">
-                    <span class="home-recent-sale-product">{{ $sale->product_name }}</span>
-                    <span class="home-recent-sale-price">${{ number_format($sale->price, 2) }}</span>
+    {{-- Recent Purchases Section --}}
+    @if($recentPurchases->isNotEmpty())
+    <div class="home-recent-purchases">
+        <h2 class="home-section-title">Recent Purchases</h2>
+        <div class="home-purchases-grid">
+            @foreach($recentPurchases as $purchase)
+                @if($purchase['product_slug'])
+                <a href="{{ route('products.show', $purchase['product_slug']) }}" class="home-purchase-item home-purchase-link">
+                @else
+                <div class="home-purchase-item">
+                @endif
+                    <div class="home-purchase-image">
+                        <img src="{{ $purchase['product_picture_url'] }}" alt="{{ $purchase['product_name'] }}">
+                    </div>
+                    <div class="home-purchase-info">
+                        <span class="home-purchase-product">{{ $purchase['product_name'] }}</span>
+                        <span class="home-purchase-price">${{ number_format($purchase['price'], 2) }}</span>
+                    </div>
+                @if($purchase['product_slug'])
+                </a>
+                @else
                 </div>
+                @endif
             @endforeach
         </div>
     </div>

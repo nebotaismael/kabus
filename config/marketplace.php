@@ -36,4 +36,15 @@ return [
     |
     */
     'commission_percentage' => env('MARKETPLACE_COMMISSION_PERCENTAGE', 2),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Vendor Registration Fee (USD)
+    |--------------------------------------------------------------------------
+    |
+    | The fee required to become a vendor, specified in USD.
+    | Payment will be processed via NowPayments and converted to cryptocurrency.
+    |
+    */
+    'vendor_fee_usd' => env('MARKETPLACE_VENDOR_FEE_USD', 250),
 ];

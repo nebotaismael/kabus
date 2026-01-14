@@ -14,7 +14,7 @@
                 <p class="dashboard-profile-last-login">Last Login: {{ $user->last_login ? $user->last_login->format('d-m-Y') : 'Never' }}</p>
             @endif
             <div class="dashboard-pgp-status">
-                <strong style="color:#d32f2f">PGP Key Status:</strong>
+                <strong style="color:#534d4d">PGP Key Status:</strong>
                 @if($pgpKey)
                     @if($pgpKey->verified)
                         <span class="dashboard-pgp-badge dashboard-pgp-verified">Verified</span>

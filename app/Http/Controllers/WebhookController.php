@@ -35,22 +35,29 @@ class WebhookController extends Controller
             return response()->json(['error' => 'Missing signature'], 403);
         }
 
-        // Get the raw payload
+        // Get the raw payload for signature validation
+        $rawBody = $request->getContent();
+        
+        // Get the parsed payload for processing
         $payload = $request->all();
 
-        // Validate signature
-        if (!$this->nowPaymentsService->validateWebhookSignature($payload, $signature)) {
-            // Calculate what the signature should be for debugging
-            $calculatedSignature = $this->calculateExpectedSignature($payload);
-            
-            Log::warning('NowPayments webhook: Invalid signature', [
-                'received_signature' => $signature,
-                'calculated_signature' => $calculatedSignature,
-                'payload' => $payload,
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-            ]);
-            return response()->json(['error' => 'Invalid signature'], 403);
+        // Validate signature using raw body (more reliable)
+        if (!$this->nowPaymentsService->validateWebhookSignatureFromRaw($rawBody, $signature)) {
+            // Also try with parsed payload as fallback
+            if (!$this->nowPaymentsService->validateWebhookSignature($payload, $signature)) {
+                // Calculate what the signature should be for debugging
+                $calculatedSignature = $this->calculateExpectedSignature($payload);
+                
+                Log::warning('NowPayments webhook: Invalid signature', [
+                    'received_signature' => $signature,
+                    'calculated_signature' => $calculatedSignature,
+                    'payload' => $payload,
+                    'raw_body_length' => strlen($rawBody),
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                ]);
+                return response()->json(['error' => 'Invalid signature'], 403);
+            }
         }
 
         // Extract payment information
@@ -268,7 +275,7 @@ class WebhookController extends Controller
     {
         $sortedPayload = $this->sortPayloadRecursively($payload);
         $jsonPayload = json_encode($sortedPayload, JSON_UNESCAPED_SLASHES);
-        return hash_hmac('sha512', $jsonPayload, config('nowpayments.ipn_secret'));
+        return hash_hmac('sha512', $jsonPayload, trim(config('nowpayments.ipn_secret')));
     }
 
     /**

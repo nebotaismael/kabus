@@ -7,10 +7,14 @@
                 ['route' => 'orders.index', 'routeIs' => 'orders.*', 'icon' => 'orders.png', 'alt' => 'Orders', 'label' => 'Orders'],
                 ['route' => 'return-addresses.index', 'routeIs' => 'return-addresses.*', 'icon' => 'return-addresses.png', 'alt' => 'Addresses', 'label' => 'Addresses'],
                 ['route' => 'vendors.index', 'routeIs' => 'vendors.*', 'icon' => 'vendors.png', 'alt' => 'Vendors', 'label' => 'Vendors'],
-                ['route' => 'become.vendor', 'routeIs' => 'become.*', 'icon' => 'become-vendor.png', 'alt' => 'Become Vendor', 'label' => 'Be a Vendor'],
                 ['route' => 'references.index', 'routeIs' => 'references.*', 'icon' => 'references.png', 'alt' => 'References', 'label' => 'References'],
                 ['route' => 'disputes.index', 'routeIs' => 'disputes.*', 'icon' => 'disputes.png', 'alt' => 'Disputes', 'label' => 'Disputes'],
             ];
+            
+            // Only show "Become Vendor" for non-vendors
+            if (!auth()->user()->isVendor()) {
+                $menuItems[] = ['route' => 'become.vendor', 'routeIs' => 'become.*', 'icon' => 'become-vendor.png', 'alt' => 'Become Vendor', 'label' => 'Be a Vendor'];
+            }
             shuffle($menuItems);
         @endphp
 

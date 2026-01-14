@@ -12,6 +12,7 @@ use App\Http\Controllers\XmrPriceController;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Log;
+use App\Models\SearchTerm;
 use Exception;
 
 class ProductController extends Controller
@@ -85,6 +86,9 @@ class ProductController extends Controller
             if (isset($filters['search'])) {
                 $searchTerm = strip_tags($filters['search']);
                 $query->where('name', 'like', '%' . addcslashes($searchTerm, '%_') . '%');
+                
+                // Log search term for admin tracking
+                SearchTerm::log($searchTerm, Auth::id(), $request->ip(), 'products');
             }
 
             if (isset($filters['vendor'])) {

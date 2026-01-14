@@ -317,4 +317,14 @@ class User extends Authenticatable
     {
         return $this->hasOne(SecretPhrase::class);
     }
+
+    /**
+     * Get the profile picture URL for the user.
+     *
+     * @return string|null
+     */
+    public function getProfilePictureUrlAttribute(): ?string
+    {
+        return $this->profile?->profile_picture_url;
+    }
 }

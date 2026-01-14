@@ -22,13 +22,13 @@
         <div class="become-vendor-index-highlight" role="alert">
             <img src="{{ asset('images/information.png') }}" alt="Information" class="become-vendor-index-info-icon">
             <div class="become-vendor-index-highlight-content">
-                <h4 class="become-vendor-index-highlight-heading">Monero Return Address Required!</h4>
+                <h4 class="become-vendor-index-highlight-heading">Return Address Required!</h4>
                 <p class="become-vendor-index-highlight-text">
-                    You must add at least one Monero return address before becoming a vendor. This is required to ensure secure and reliable payment processing.
+                    You must add at least one return address before becoming a vendor. This is required to ensure secure and reliable payment processing.
                 </p>
                 <hr class="become-vendor-index-divider">
                 <p class="become-vendor-index-highlight-text become-vendor-index-mb-0">
-                    Please visit your Addresses page to add a Monero return address first.
+                    Please visit your Addresses page to add a return address first.
                 </p>
             </div>
         </div>
@@ -50,12 +50,16 @@
                 <div class="become-vendor-payment-info">
                     <div class="become-vendor-payment-details text-center">
                         <p>
+                            <strong>Vendor Fee:</strong>
+                            <span class="become-vendor-payment-amount">${{ number_format(config('marketplace.vendor_fee_usd', 250), 2) }} USD</span>
+                        </p>
+                        <p>
                             <strong>Payment Address:</strong>
                             <span class="become-vendor-payment-address">{{ $vendorPayment->address }}</span>
                         </p>
                         <p>
-                            <strong>Required Amount:</strong>
-                            <span class="become-vendor-payment-amount">{{ config('monero.vendor_payment_required_amount') }} {{ strtoupper($vendorPayment->pay_currency ?? 'XMR') }}</span>
+                            <strong>Pay in:</strong>
+                            <span class="become-vendor-payment-amount">{{ strtoupper($vendorPayment->pay_currency ?? 'XMR') }}</span>
                         </p>
                         <p>
                             <strong>Status:</strong>
@@ -79,7 +83,7 @@
                         </p>
                         @if(!$vendorPayment->payment_completed)
                             <div class="become-vendor-payment-notice">
-                                <p><strong>Important:</strong> Send the exact amount shown above to the payment address. The payment status will update automatically once your transaction is confirmed on the network.</p>
+                                <p><strong>Important:</strong> Send the equivalent amount in {{ strtoupper($vendorPayment->pay_currency ?? 'XMR') }} to the payment address. The payment status will update automatically once your transaction is confirmed.</p>
                             </div>
                         @endif
                     </div>
@@ -98,7 +102,7 @@
                 @endif
             @else
                 <p class="become-vendor-payment-error">
-                    Error occurred while creating Monero payment address. Please try again later.
+                    Error occurred while creating payment address. Please try again later.
                 </p>
             @endif
         </div>

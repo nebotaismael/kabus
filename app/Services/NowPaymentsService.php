@@ -154,7 +154,32 @@ class NowPaymentsService
     {
         $sortedPayload = $this->sortPayloadRecursively($payload);
         $jsonPayload = json_encode($sortedPayload, JSON_UNESCAPED_SLASHES);
-        $calculatedSignature = hash_hmac('sha512', $jsonPayload, $this->ipnSecret);
+        // Trim the IPN secret as per NowPayments documentation
+        $calculatedSignature = hash_hmac('sha512', $jsonPayload, trim($this->ipnSecret));
+
+        return hash_equals($calculatedSignature, $signature);
+    }
+
+    /**
+     * Validate webhook signature using raw request body.
+     * This method is more reliable as it uses the exact JSON sent by NowPayments.
+     *
+     * @param string $rawBody The raw request body
+     * @param string $signature The signature from x-nowpayments-sig header
+     * @return bool True if signature is valid
+     */
+    public function validateWebhookSignatureFromRaw(string $rawBody, string $signature): bool
+    {
+        // Decode the raw body to array, sort it, then re-encode
+        $payload = json_decode($rawBody, true);
+        if ($payload === null) {
+            return false;
+        }
+
+        $sortedPayload = $this->sortPayloadRecursively($payload);
+        $jsonPayload = json_encode($sortedPayload, JSON_UNESCAPED_SLASHES);
+        // Trim the IPN secret as per NowPayments documentation
+        $calculatedSignature = hash_hmac('sha512', $jsonPayload, trim($this->ipnSecret));
 
         return hash_equals($calculatedSignature, $signature);
     }

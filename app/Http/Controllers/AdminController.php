@@ -16,6 +16,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Popup;
 use App\Models\VendorPayment;
+use App\Models\SearchTerm;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Intervention\Image\ImageManager;
@@ -1290,5 +1291,45 @@ class AdminController extends Controller
             Log::error('Product picture upload failed: ' . $e->getMessage());
             throw new Exception($e->getMessage());
         }
+    }
+
+    /**
+     * Display search terms for admin tracking.
+     */
+    public function searchTerms(Request $request)
+    {
+        $query = SearchTerm::with('user')->orderBy('created_at', 'desc');
+
+        if ($request->filled('search')) {
+            $searchTerm = strip_tags($request->search);
+            $query->where('term', 'like', '%' . addcslashes($searchTerm, '%_') . '%');
+        }
+
+        if ($request->filled('source')) {
+            $query->where('source', $request->source);
+        }
+
+        $searchTerms = $query->paginate(50)->withQueryString();
+
+        // Get popular terms (top 20)
+        $popularTerms = SearchTerm::select('term', \DB::raw('COUNT(*) as count'))
+            ->groupBy('term')
+            ->orderByDesc('count')
+            ->limit(20)
+            ->get();
+
+        return view('admin.search-terms', compact('searchTerms', 'popularTerms'));
+    }
+
+    /**
+     * Clear all search terms.
+     */
+    public function clearSearchTerms()
+    {
+        SearchTerm::truncate();
+        Log::info('Search terms cleared by admin ' . auth()->id());
+        
+        return redirect()->route('admin.search-terms')
+            ->with('success', 'All search terms have been cleared.');
     }
 }

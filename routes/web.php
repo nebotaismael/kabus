@@ -262,6 +262,10 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
         Route::post('/admin/pop-up/{popup}/activate', [AdminController::class, 'popupActivate'])->name('admin.popup.activate');
         Route::delete('/admin/pop-up/{popup}', [AdminController::class, 'popupDestroy'])->name('admin.popup.destroy');
         
+        // Admin Search Terms
+        Route::get('/admin/search-terms', [AdminController::class, 'searchTerms'])->name('admin.search-terms');
+        Route::delete('/admin/search-terms', [AdminController::class, 'clearSearchTerms'])->name('admin.search-terms.clear');
+        
         // Admin Products Management
         Route::get('/admin/all-products', [AdminController::class, 'allProducts'])->name('admin.all-products');
         Route::get('/admin/products/{product}/edit', [AdminController::class, 'editProduct'])->name('admin.products.edit');

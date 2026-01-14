@@ -1,13 +1,37 @@
 <footer class="footer">
-    <div class="footer-container">
-        <div class="footer-content">
+    {{-- Top Row: Logo, Text, Listed On --}}
+    <div class="footer-top">
+        <div class="footer-brand">
+            <img src="{{ asset('images/hecate.png') }}" alt="Hecate Market" class="footer-brand-logo">
+        </div>
+        <div class="footer-brand-text">
+            Hecate Market is a secure, anonymous marketplace focused on privacy, Monero payments, and user protection.
+        </div>
+        <div class="footer-listings">
+            <span class="footer-listings-label">Listed on:</span>
+            <a href="https://dread.link" target="_blank" rel="noopener" class="footer-listing-link">
+                <img src="{{ asset('images/dread.png') }}" alt="Dread" class="footer-listing-icon">
+            </a>
+            <a href="https://tor.link" target="_blank" rel="noopener" class="footer-listing-link">
+                <img src="{{ asset('images/torlink.webp') }}" alt="Tor.link" class="footer-listing-icon">
+            </a>
+            <a href="https://torrun.com" target="_blank" rel="noopener" class="footer-listing-link">
+                <img src="{{ asset('images/torrun.png') }}" alt="TorRun" class="footer-listing-icon">
+            </a>
+            <a href="https://darkeye.org" target="_blank" rel="noopener" class="footer-listing-link">
+                <img src="{{ asset('images/darkeye.jpg') }}" alt="Dark Eye" class="footer-listing-icon">
+            </a>
+        </div>
+    </div>
+
+    {{-- Bottom Row: Buttons, XMR Price, Canary --}}
+    <div class="footer-bottom">
+        <div class="footer-left">
+         
             <a href="{{ route('pgp-key') }}" class="footer-button">PGP Key</a>
-            <a href="{{ route('disclaimer') }}" class="footer-button">Disclaimer</a>
-            @if(config('marketplace.show_javascript_warning'))
-                <div class="footer-javascript-warning-left js-warning-elements">
-                    <span class="footer-javascript-warning-text-left">Please Disable JavaScript</span>
-                </div>
-            @endif
+        </div>
+
+        <div class="footer-center">
             <div class="footer-xmr-price">
                 <span class="footer-xmr-price-label">XMR/USD:</span>
                 @php
@@ -21,25 +45,12 @@
                     @endif
                 </span>
             </div>
-            @if(config('marketplace.show_javascript_warning'))
-                <div class="footer-javascript-warning-right js-warning-elements">
-                    <img src="{{ asset('images/javascript-logo.png') }}" alt="JavaScript Logo" class="footer-javascript-warning-icon">
-                    <span class="footer-javascript-warning-text-right">Warning</span>
-                    <img src="{{ asset('images/javascript-warning.gif') }}" alt="JavaScript Warning" class="footer-javascript-warning-gif">
-                </div>
-            @endif
-            <a href="{{ route('refund-policy') }}" class="footer-button">Refund Policy</a>
+        </div>
+
+        <div class="footer-right">
             <a href="{{ route('canary') }}" class="footer-button">Canary</a>
+            <div class="footer-scroll-top">
+           </div>
         </div>
     </div>
 </footer>
-
-@if(config('marketplace.show_javascript_warning'))
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('.js-warning-elements').forEach(function(element) {
-                element.style.display = 'flex';
-            });
-        });
-    </script>
-@endif
