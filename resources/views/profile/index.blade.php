@@ -45,8 +45,8 @@
                     <h2 class="profile-form-title">Update Your Profile</h2>
                     <div class="profile-form-group">
                         <label for="description" class="profile-form-label">Description</label>
-                        <textarea name="description" id="description" rows="10" required minlength="4" maxlength="800" class="profile-form-textarea">{{ old('description', $profile->description ? e(Crypt::decryptString($profile->description)) : '') }}</textarea>
-                        <small class="profile-form-hint">You can write between 4 and 800 characters. Letters, numbers, spaces and punctuation marks are allowed. Adding a description is required before adding a profile picture.</small>
+                        <textarea name="description" id="description" rows="10" required minlength="4" maxlength="2000" class="profile-form-textarea">{{ old('description', $profile->description ? e(Crypt::decryptString($profile->description)) : '') }}</textarea>
+                        <small class="profile-form-hint">You can write between 4 and 2000 characters. Letters, numbers, spaces, punctuation marks, and emojis are allowed.</small>
                     </div>
                     <div>
                         <button type="submit" class="profile-submit-btn">Update Profile</button>

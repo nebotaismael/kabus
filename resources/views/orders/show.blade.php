@@ -106,12 +106,28 @@
         <div class="orders-show-payment-container">
             <div class="orders-show-payment-card">
                 <h2 class="orders-show-payment-subtitle">Payment Information</h2>
+                
+                {{-- Currency Selector --}}
+                @if(!$order->is_paid)
+                    <x-currency-selector 
+                        :currencies="$supportedCurrencies" 
+                        :selected="$selectedCurrency" 
+                        :action="route('orders.change-currency', $order->unique_url)" 
+                    />
+                @endif
+            
+                @php
+                    $currencyConfig = $supportedCurrencies[$selectedCurrency] ?? null;
+                    $decimals = $currencyConfig['decimals'] ?? 8;
+                    $currencySymbol = $currencyConfig['symbol'] ?? strtoupper($selectedCurrency);
+                    $currencyName = $currencyConfig['name'] ?? strtoupper($selectedCurrency);
+                @endphp
             
                 <div class="orders-show-payment-details">
                     <div class="orders-show-payment-row">
                         <span class="orders-show-payment-label">Exact Amount to Send:</span>
                         <span class="orders-show-payment-value">
-                            <span class="orders-show-payment-amount">ɱ{{ number_format($order->pay_amount, 12) }} {{ strtoupper($order->pay_currency ?? 'XMR') }}</span>
+                            <span class="orders-show-payment-amount">{{ number_format($order->pay_amount, $decimals) }} {{ $currencySymbol }}</span>
                         </span>
                     </div>
                 
@@ -178,7 +194,7 @@
 
                     <div class="orders-show-payment-amount-reminder">
                         <span class="orders-show-payment-label">Amount:</span>
-                        <span class="orders-show-payment-amount">ɱ{{ number_format($order->pay_amount, 12) }} {{ strtoupper($order->pay_currency ?? 'XMR') }}</span>
+                        <span class="orders-show-payment-amount">{{ number_format($order->pay_amount, $decimals) }} {{ $currencySymbol }}</span>
                     </div>
                 
                     <div class="orders-show-payment-refresh">
@@ -228,9 +244,14 @@
                     </div>
                 @endif
                 @if($order->pay_amount)
+                    @php
+                        $displayCurrencyConfig = $supportedCurrencies[$order->pay_currency ?? 'xmr'] ?? null;
+                        $displayDecimals = $displayCurrencyConfig['decimals'] ?? 8;
+                        $displaySymbol = $displayCurrencyConfig['symbol'] ?? strtoupper($order->pay_currency ?? 'XMR');
+                    @endphp
                     <div class="orders-show-info-item">
                         <div class="orders-show-info-label">Payment Amount</div>
-                        <div class="orders-show-info-value total">ɱ{{ number_format($order->pay_amount, 12) }} {{ strtoupper($order->pay_currency ?? 'XMR') }}</div>
+                        <div class="orders-show-info-value total">{{ number_format($order->pay_amount, $displayDecimals) }} {{ $displaySymbol }}</div>
                     </div>
                 @endif
             </div>

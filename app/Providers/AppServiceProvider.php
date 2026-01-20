@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\AntiPhishingService;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Pagination\Paginator;
@@ -15,7 +16,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Register AntiPhishingService as a singleton
+        $this->app->singleton(AntiPhishingService::class, function ($app) {
+            return new AntiPhishingService();
+        });
     }
 
     /**

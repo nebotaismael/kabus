@@ -17,6 +17,7 @@ use App\Models\Product;
 use App\Models\Popup;
 use App\Models\VendorPayment;
 use App\Models\SearchTerm;
+use App\Models\RegistrationLog;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Intervention\Image\ImageManager;
@@ -50,6 +51,36 @@ class AdminController extends Controller
             Storage::put('public/canary.txt', $request->canary);
 
             return redirect()->route('admin.canary')->with('success', 'Canary updated successfully.');
+        } catch (ValidationException $e) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', $e->validator->errors()->first());
+        }
+    }
+
+    public function showUpdatePgpKey()
+    {
+        $currentPgpKey = Storage::get('public/pgp_key.txt');
+        return view('admin.pgp-key', compact('currentPgpKey'));
+    }
+
+    public function updatePgpKey(Request $request)
+    {
+        try {
+            $request->validate([
+                'pgp_key' => 'required|string|max:8000',
+            ]);
+
+            $result = Storage::put('public/pgp_key.txt', $request->pgp_key);
+            
+            // Log the update for debugging
+            Log::info('PGP Key updated by admin', [
+                'admin_id' => auth()->id(),
+                'file_written' => $result,
+                'content_length' => strlen($request->pgp_key)
+            ]);
+
+            return redirect()->route('admin.pgp-key')->with('success', 'PGP Key updated successfully.');
         } catch (ValidationException $e) {
             return redirect()->back()
                 ->withInput()
@@ -175,6 +206,19 @@ class AdminController extends Controller
     {
         $users = User::orderBy('username')->paginate(32);
         return view('admin.users.list', compact('users'));
+    }
+
+    public function registrationLogs()
+    {
+        $logs = RegistrationLog::orderBy('registered_at', 'desc')->paginate(32);
+        return view('admin.registration-logs', compact('logs'));
+    }
+
+    public function clearRegistrationLogs()
+    {
+        RegistrationLog::truncate();
+        return redirect()->route('admin.registration-logs')
+            ->with('success', 'Registration logs cleared.');
     }
 
     public function userDetails(User $user)
@@ -1125,10 +1169,24 @@ class AdminController extends Controller
             // Calculate refund amount
             $refundAmount = $application->total_received * ($refundPercentage / 100);
 
-            // Get random return address
+            // Get the currency used for the vendor payment
+            $payCurrency = $application->pay_currency ?? 'xmr';
+
+            // Get return address matching the payment currency
             $returnAddress = $application->user->returnAddresses()
+                ->where('currency', $payCurrency)
                 ->inRandomOrder()
                 ->first();
+
+            // Fallback to any available address if no matching currency
+            if (!$returnAddress) {
+                $returnAddress = $application->user->returnAddresses()
+                    ->inRandomOrder()
+                    ->first();
+                if ($returnAddress) {
+                    $payCurrency = $returnAddress->currency;
+                }
+            }
 
             if (!$returnAddress) {
                 throw new \Exception('No return address found for user');
@@ -1143,23 +1201,24 @@ class AdminController extends Controller
             try {
                 // Use NowPayments Payout API
                 $result = $nowPaymentsService->createPayout(
-                    $returnAddress->monero_address,
+                    $returnAddress->address,
                     $refundAmount,
-                    'xmr',
+                    $payCurrency,
                     "Vendor application refund for user {$application->user_id}"
                 );
 
                 // Update refund details
                 $application->update([
                     'refund_amount' => $refundAmount,
-                    'refund_address' => $returnAddress->monero_address
+                    'refund_address' => $returnAddress->address
                 ]);
 
+                $currencySymbol = strtoupper($payCurrency);
                 if ($result && isset($result['id'])) {
                     $application->update([
                         'refund_payout_id' => $result['id']
                     ]);
-                    $refundMessage = "Refund of {$refundAmount} XMR has been initiated. Payout ID: {$result['id']}";
+                    $refundMessage = "Refund of {$refundAmount} {$currencySymbol} has been initiated. Payout ID: {$result['id']}";
                 } else {
                     $refundMessage = "Application denied but automatic refund failed. Refund details saved for manual processing.";
                 }
@@ -1170,13 +1229,13 @@ class AdminController extends Controller
                 // Still update refund details for manual processing
                 $application->update([
                     'refund_amount' => $refundAmount,
-                    'refund_address' => $returnAddress->monero_address
+                    'refund_address' => $returnAddress->address
                 ]);
             }
 
             \DB::commit();
 
-            Log::info("Vendor application denied for user {$application->user_id}. Refund processed: {$refundAmount} XMR to address {$returnAddress->monero_address}");
+            Log::info("Vendor application denied for user {$application->user_id}. Refund processed: {$refundAmount} {$payCurrency} to address {$returnAddress->address}");
 
             return redirect()->route('admin.vendor-applications.show', $application)
                 ->with('success', "Application denied successfully. " . $refundMessage);
@@ -1331,5 +1390,159 @@ class AdminController extends Controller
         
         return redirect()->route('admin.search-terms')
             ->with('success', 'All search terms have been cleared.');
+    }
+
+    /**
+     * Display the anti-phishing settings page.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function showAntiPhishingSettings(): \Illuminate\View\View
+    {
+        // Get current settings from database or fall back to config defaults
+        $defaultAddresses = config('antiphishing.onion_addresses', []);
+        $storedAddresses = $this->getAntiPhishingSetting('onion_addresses', null);
+        
+        // Parse stored addresses (stored as JSON string)
+        if ($storedAddresses && is_string($storedAddresses)) {
+            $onionAddresses = json_decode($storedAddresses, true) ?? $defaultAddresses;
+        } else {
+            $onionAddresses = $defaultAddresses;
+        }
+        
+        // Ensure we always have 3 address slots
+        while (count($onionAddresses) < 3) {
+            $onionAddresses[] = '';
+        }
+        
+        $settings = [
+            'enabled' => $this->getAntiPhishingSetting('enabled', config('antiphishing.enabled', true)),
+            'onion_addresses' => $onionAddresses,
+            'difficulty' => $this->getAntiPhishingSetting('difficulty', config('antiphishing.difficulty', 4)),
+            'time_limit' => $this->getAntiPhishingSetting('time_limit', config('antiphishing.time_limit', 5)),
+        ];
+
+        return view('admin.anti-phishing', compact('settings'));
+    }
+
+    /**
+     * Update the anti-phishing settings.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function updateAntiPhishingSettings(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        try {
+            // Validate the request
+            $validated = $request->validate([
+                'enabled' => 'boolean',
+                'onion_addresses' => 'required|array|min:1',
+                'onion_addresses.*' => [
+                    'nullable',
+                    'string',
+                    'regex:/^[a-zA-Z0-9]{56}\.onion$/'
+                ],
+                'difficulty' => 'required|integer|min:2|max:8',
+                'time_limit' => 'required|integer|min:1|max:10',
+            ], [
+                'onion_addresses.*.regex' => 'Invalid .onion address format. Must be 56 alphanumeric characters followed by .onion',
+                'difficulty.min' => 'Difficulty must be between 2 and 8 characters.',
+                'difficulty.max' => 'Difficulty must be between 2 and 8 characters.',
+                'time_limit.min' => 'Time limit must be between 1 and 10 minutes.',
+                'time_limit.max' => 'Time limit must be between 1 and 10 minutes.',
+            ]);
+
+            // Filter out empty addresses and ensure at least one is provided
+            $onionAddresses = array_filter($validated['onion_addresses'], fn($addr) => !empty($addr));
+            
+            if (empty($onionAddresses)) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', 'At least one .onion address is required.');
+            }
+
+            // Use database transaction for data integrity
+            \DB::beginTransaction();
+
+            // Save settings to database
+            $this->setAntiPhishingSetting('enabled', $request->boolean('enabled'));
+            $this->setAntiPhishingSetting('onion_addresses', json_encode(array_values($onionAddresses)));
+            $this->setAntiPhishingSetting('difficulty', $validated['difficulty']);
+            $this->setAntiPhishingSetting('time_limit', $validated['time_limit']);
+
+            \DB::commit();
+
+            // Log the settings change with admin ID and timestamp
+            Log::info('Anti-phishing settings updated', [
+                'admin_id' => auth()->id(),
+                'timestamp' => now()->toIso8601String(),
+                'settings' => [
+                    'enabled' => $request->boolean('enabled'),
+                    'onion_addresses' => $onionAddresses,
+                    'difficulty' => $validated['difficulty'],
+                    'time_limit' => $validated['time_limit'],
+                ],
+            ]);
+
+            return redirect()->route('admin.anti-phishing')
+                ->with('success', 'Anti-phishing settings updated successfully.');
+
+        } catch (ValidationException $e) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', $e->validator->errors()->first());
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            Log::error('Error updating anti-phishing settings: ' . $e->getMessage());
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'An error occurred while updating settings. Please try again.');
+        }
+    }
+
+    /**
+     * Get an anti-phishing setting from the database or return default.
+     *
+     * @param  string  $key
+     * @param  mixed  $default
+     * @return mixed
+     */
+    private function getAntiPhishingSetting(string $key, mixed $default = null): mixed
+    {
+        // Check if AntiPhishingSetting model exists and use it
+        if (class_exists(\App\Models\AntiPhishingSetting::class)) {
+            $setting = \App\Models\AntiPhishingSetting::where('key', $key)->first();
+            if ($setting) {
+                // Cast boolean values appropriately
+                if ($key === 'enabled') {
+                    return filter_var($setting->value, FILTER_VALIDATE_BOOLEAN);
+                }
+                // Cast numeric values appropriately
+                if (in_array($key, ['difficulty', 'time_limit'])) {
+                    return (int) $setting->value;
+                }
+                return $setting->value;
+            }
+        }
+        return $default;
+    }
+
+    /**
+     * Set an anti-phishing setting in the database.
+     *
+     * @param  string  $key
+     * @param  mixed  $value
+     * @return void
+     */
+    private function setAntiPhishingSetting(string $key, mixed $value): void
+    {
+        // Check if AntiPhishingSetting model exists and use it
+        if (class_exists(\App\Models\AntiPhishingSetting::class)) {
+            \App\Models\AntiPhishingSetting::updateOrCreate(
+                ['key' => $key],
+                ['value' => is_bool($value) ? ($value ? '1' : '0') : (string) $value]
+            );
+        }
     }
 }

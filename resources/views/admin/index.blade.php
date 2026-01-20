@@ -57,6 +57,18 @@
             </div>
 
             <div class="a-v-panel-item">
+                <h3 class="a-v-panel-item-title">Official PGP Key</h3>
+                <p class="a-v-panel-item-description">Update the official PGP public key displayed in the footer.</p>
+                <a href="{{ route('admin.pgp-key') }}" class="a-v-panel-item-link">Update PGP Key</a>
+            </div>
+
+            <div class="a-v-panel-item">
+                <h3 class="a-v-panel-item-title">Anti-Phishing Settings</h3>
+                <p class="a-v-panel-item-description">Configure anti-phishing protection including address verification and challenge settings.</p>
+                <a href="{{ route('admin.anti-phishing') }}" class="a-v-panel-item-link">Configure Settings</a>
+            </div>
+
+            <div class="a-v-panel-item">
                 <h3 class="a-v-panel-item-title">Vendor Applications</h3>
                 <p class="a-v-panel-item-description">Review and approve/deny vendor applications requiring verification.</p>
                 <a href="{{ route('admin.vendor-applications.index') }}" class="a-v-panel-item-link">Manage Applications</a>
@@ -78,6 +90,12 @@
                 <h3 class="a-v-panel-item-title">Search Terms</h3>
                 <p class="a-v-panel-item-description">Track and analyze user search queries across the platform.</p>
                 <a href="{{ route('admin.search-terms') }}" class="a-v-panel-item-link">View Searches</a>
+            </div>
+
+            <div class="a-v-panel-item">
+                <h3 class="a-v-panel-item-title">Registration Logs</h3>
+                <p class="a-v-panel-item-description">View recently registered usernames for testing purposes.</p>
+                <a href="{{ route('admin.registration-logs') }}" class="a-v-panel-item-link">View Logs</a>
             </div>
         </div>
     </div>

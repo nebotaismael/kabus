@@ -22,13 +22,13 @@
         <div class="become-vendor-index-highlight" role="alert">
             <img src="{{ asset('images/information.png') }}" alt="Information" class="become-vendor-index-info-icon">
             <div class="become-vendor-index-highlight-content">
-                <h4 class="become-vendor-index-highlight-heading">Return Address Required!</h4>
+                <h4 class="become-vendor-index-highlight-heading">Payout Address Required!</h4>
                 <p class="become-vendor-index-highlight-text">
-                    You must add at least one return address before becoming a vendor. This is required to ensure secure and reliable payment processing.
+                    You must add at least one cryptocurrency payout address before becoming a vendor. This is required to receive payments when orders are completed.
                 </p>
                 <hr class="become-vendor-index-divider">
                 <p class="become-vendor-index-highlight-text become-vendor-index-mb-0">
-                    Please visit your Addresses page to add a return address first.
+                    <a href="{{ route('return-addresses.index') }}" class="become-vendor-payment-btn">Go to Addresses Page</a>
                 </p>
             </div>
         </div>
@@ -48,6 +48,22 @@
                 </div>
             @elseif(isset($vendorPayment))
                 <div class="become-vendor-payment-info">
+                    {{-- Currency Selector --}}
+                    @if(!$vendorPayment->payment_completed && isset($supportedCurrencies))
+                        <x-currency-selector 
+                            :currencies="$supportedCurrencies" 
+                            :selected="$selectedCurrency" 
+                            :action="route('become.payment.change-currency')" 
+                        />
+                    @endif
+                    
+                    @php
+                        $currencyConfig = $supportedCurrencies[$selectedCurrency] ?? null;
+                        $decimals = $currencyConfig['decimals'] ?? 8;
+                        $currencySymbol = $currencyConfig['symbol'] ?? strtoupper($selectedCurrency);
+                        $currencyName = $currencyConfig['name'] ?? strtoupper($selectedCurrency);
+                    @endphp
+                    
                     <div class="become-vendor-payment-details text-center">
                         <p>
                             <strong>Vendor Fee:</strong>
@@ -59,7 +75,7 @@
                         </p>
                         <p>
                             <strong>Pay in:</strong>
-                            <span class="become-vendor-payment-amount">{{ strtoupper($vendorPayment->pay_currency ?? 'XMR') }}</span>
+                            <span class="become-vendor-payment-amount">{{ $currencyName }} ({{ $currencySymbol }})</span>
                         </p>
                         <p>
                             <strong>Status:</strong>
@@ -83,7 +99,7 @@
                         </p>
                         @if(!$vendorPayment->payment_completed)
                             <div class="become-vendor-payment-notice">
-                                <p><strong>Important:</strong> Send the equivalent amount in {{ strtoupper($vendorPayment->pay_currency ?? 'XMR') }} to the payment address. The payment status will update automatically once your transaction is confirmed.</p>
+                                <p><strong>Important:</strong> Send the equivalent amount in {{ $currencySymbol }} to the payment address. The payment status will update automatically once your transaction is confirmed.</p>
                             </div>
                         @endif
                     </div>

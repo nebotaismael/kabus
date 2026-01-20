@@ -43,6 +43,9 @@
             {{-- Right side: Icons and User Menu --}}
             <div class="navbar-right">
                 @auth
+                    {{-- Anti-Phishing Badge - displays user's secret phrase for site verification --}}
+                    @include('components.anti-phishing-badge')
+                    
                     {{-- Cart Icon (no border) --}}
                     <a href="{{ route('cart.index') }}" class="navbar-icon-flat {{ request()->routeIs('cart.*') ? 'active' : '' }}">
                         <img src="{{ asset('icons/cart.png') }}" alt="Cart" class="navbar-icon-png">
@@ -82,6 +85,22 @@
                             <a href="{{ route('wishlist.index') }}" class="navbar-dropdown-item">
                                 <img src="{{ asset('icons/wishlist.png') }}" alt="Wishlist" class="navbar-dropdown-icon">
                                 Wishlist
+                            </a>
+                            <a href="{{ route('return-addresses.index') }}" class="navbar-dropdown-item">
+                                <img src="{{ asset('icons/return-addresses.png') }}" alt="Addresses" class="navbar-dropdown-icon">
+                                Addresses
+                            </a>
+                            <a href="{{ route('vendors.index') }}" class="navbar-dropdown-item">
+                                <img src="{{ asset('icons/vendors.png') }}" alt="Vendors" class="navbar-dropdown-icon">
+                                Vendors
+                            </a>
+                            <a href="{{ route('references.index') }}" class="navbar-dropdown-item">
+                                <img src="{{ asset('icons/references.png') }}" alt="References" class="navbar-dropdown-icon">
+                                References
+                            </a>
+                            <a href="{{ route('disputes.index') }}" class="navbar-dropdown-item">
+                                <img src="{{ asset('icons/disputes.png') }}" alt="Disputes" class="navbar-dropdown-icon">
+                                Disputes
                             </a>
                             @if(auth()->user()->isVendor())
                             <a href="{{ route('vendor.index') }}" class="navbar-dropdown-item">

@@ -17,6 +17,7 @@
             <label for="password" class="hecate-label">Password</label>
             <input type="password" id="password" name="password" 
                    class="hecate-input-minimal" required minlength="8" maxlength="40" placeholder="Enter password">
+            <p class="password-hint">Min 8 chars: uppercase, lowercase, number, and special character</p>
         </div>
         <div class="hecate-form-group">
             <label for="password_confirmation" class="hecate-label">Confirm Password</label>

@@ -80,20 +80,33 @@ class BecomeVendorController extends Controller
 
         try {
             $vendorPayment = $this->getCurrentVendorPayment($user, $nowPaymentsService);
-            $qrCodeDataUri = $vendorPayment ? $this->generateQrCode($vendorPayment->address) : null;
+            $qrCodeDataUri = $vendorPayment ? $this->generateQrCode(
+                $vendorPayment->address, 
+                null, 
+                $vendorPayment->pay_currency ?? 'xmr',
+                $nowPaymentsService
+            ) : null;
+
+            // Get supported currencies for display
+            $supportedCurrencies = $nowPaymentsService->getSupportedCurrencies();
+            $selectedCurrency = $vendorPayment->pay_currency ?? $nowPaymentsService->getDefaultCurrency();
 
             return view('become-vendor.payment', [
-                'vendorPayment'   => $vendorPayment,
-                'qrCodeDataUri'   => $qrCodeDataUri,
-                'hasPgpVerified'  => $hasPgpVerified,
-                'hasMoneroAddress'=> $hasMoneroAddress
+                'vendorPayment'       => $vendorPayment,
+                'qrCodeDataUri'       => $qrCodeDataUri,
+                'hasPgpVerified'      => $hasPgpVerified,
+                'hasMoneroAddress'    => $hasMoneroAddress,
+                'supportedCurrencies' => $supportedCurrencies,
+                'selectedCurrency'    => $selectedCurrency,
             ]);
         } catch (\Exception $e) {
             Log::error('Error in payment process: ' . $e->getMessage());
             return view('become-vendor.payment', [
-                'error'           => 'An error occurred while setting up your payment. The payment service may be temporarily unavailable. Please try again in a few minutes.',
-                'hasPgpVerified'  => $hasPgpVerified,
-                'hasMoneroAddress'=> $hasMoneroAddress
+                'error'               => 'An error occurred while setting up your payment. The payment service may be temporarily unavailable. Please try again in a few minutes.',
+                'hasPgpVerified'      => $hasPgpVerified,
+                'hasMoneroAddress'    => $hasMoneroAddress,
+                'supportedCurrencies' => $nowPaymentsService->getSupportedCurrencies(),
+                'selectedCurrency'    => $nowPaymentsService->getDefaultCurrency(),
             ]);
         }
     }
@@ -119,18 +132,27 @@ class BecomeVendorController extends Controller
         }
     }
 
-    private function createVendorPayment(User $user, NowPaymentsService $nowPaymentsService)
+    private function createVendorPayment(User $user, NowPaymentsService $nowPaymentsService, string $currency = 'xmr')
     {
         try {
+            // Validate currency
+            if (!$nowPaymentsService->isValidCurrency($currency)) {
+                $currency = $nowPaymentsService->getDefaultCurrency();
+            }
+            
             // Get the required vendor payment amount in USD from config
             $requiredAmountUsd = config('marketplace.vendor_fee_usd', 250);
+            
+            // Pre-generate identifier for order_id before calling API
+            // This avoids the issue of null order_id being rejected by NowPayments
+            $identifier = \Str::random(30);
             
             // Create payment via NowPayments with USD pricing
             $paymentResult = $nowPaymentsService->createPayment(
                 $requiredAmountUsd,
                 'usd',  // Price in USD
-                'xmr',  // Pay in XMR
-                null,   // Will use identifier as order_id
+                $currency,  // Pay in selected currency
+                $identifier,  // Use pre-generated identifier as order_id
                 'vendor_fee'
             );
             
@@ -139,31 +161,16 @@ class BecomeVendorController extends Controller
             }
             
             $vendorPayment = new VendorPayment([
+                'identifier'    => $identifier,
                 'address'       => $paymentResult['pay_address'],
                 'np_payment_id' => $paymentResult['payment_id'],
-                'pay_currency'  => $paymentResult['pay_currency'] ?? 'xmr',
+                'pay_currency'  => $paymentResult['pay_currency'] ?? $currency,
                 'user_id'       => $user->id,
                 'expires_at'    => Carbon::now()->addMinutes((int) config('monero.address_expiration_time')),
             ]);
             $vendorPayment->save();
-            
-            // Update the identifier to be used as order_id for webhook matching
-            // Re-create payment with the identifier as order_id
-            $paymentResult = $nowPaymentsService->createPayment(
-                $requiredAmountUsd,
-                'usd',
-                'xmr',
-                $vendorPayment->identifier,
-                'vendor_fee'
-            );
-            
-            if ($paymentResult) {
-                $vendorPayment->address = $paymentResult['pay_address'];
-                $vendorPayment->np_payment_id = $paymentResult['payment_id'];
-                $vendorPayment->save();
-            }
 
-            Log::info("Created new vendor payment via NowPayments for user {$user->id}");
+            Log::info("Created new vendor payment via NowPayments for user {$user->id} with currency {$currency}");
             return $vendorPayment;
         } catch (\Exception $e) {
             Log::error('Error creating NowPayments vendor payment: ' . $e->getMessage());
@@ -343,13 +350,21 @@ class BecomeVendorController extends Controller
         }
     }
 
-    private function generateQrCode($address)
+    private function generateQrCode($address, $amount = null, $currency = 'xmr', ?NowPaymentsService $nowPaymentsService = null)
     {
         try {
+            // Build payment URI based on currency
+            if ($nowPaymentsService) {
+                $data = $nowPaymentsService->buildPaymentUri($address, $amount, $currency);
+            } else {
+                // Fallback to plain address if service not available
+                $data = $address;
+            }
+            
             $result = Builder::create()
                 ->writer(new PngWriter())
                 ->writerOptions([])
-                ->data($address)
+                ->data($data)
                 ->encoding(new Encoding('UTF-8'))
                 ->errorCorrectionLevel(ErrorCorrectionLevel::High)
                 ->size(300)
@@ -360,6 +375,82 @@ class BecomeVendorController extends Controller
         } catch (\Exception $e) {
             Log::error('Error generating QR code: ' . $e->getMessage());
             return null;
+        }
+    }
+
+    /**
+     * Change the payment currency for vendor fee.
+     */
+    public function changeCurrency(Request $request, NowPaymentsService $nowPaymentsService)
+    {
+        $user = $request->user();
+        
+        // Check if user is already a vendor
+        if ($user->isVendor()) {
+            return redirect()->route('become.payment')
+                ->with('info', 'You are already a vendor.');
+        }
+
+        // Check if user has a processed application
+        $existingPayment = VendorPayment::where('user_id', $user->id)
+            ->whereNotNull('application_status')
+            ->first();
+
+        if ($existingPayment) {
+            return redirect()->route('become.vendor')
+                ->with('info', 'You already have a processed vendor application.');
+        }
+
+        // Get the current unpaid vendor payment
+        $vendorPayment = VendorPayment::where('user_id', $user->id)
+            ->where('payment_completed', false)
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if (!$vendorPayment) {
+            return redirect()->route('become.payment')
+                ->with('error', 'No pending payment found.');
+        }
+
+        $currency = strtolower($request->input('currency', 'xmr'));
+        
+        // Validate currency
+        if (!$nowPaymentsService->isValidCurrency($currency)) {
+            Log::warning('Invalid currency selection attempted for vendor fee', ['currency' => $currency, 'user_id' => $user->id]);
+            $currency = $nowPaymentsService->getDefaultCurrency();
+        }
+
+        try {
+            // Get the required vendor payment amount in USD from config
+            $requiredAmountUsd = config('marketplace.vendor_fee_usd', 250);
+            
+            // Create new payment with selected currency
+            $paymentResult = $nowPaymentsService->createPayment(
+                $requiredAmountUsd,
+                'usd',
+                $currency,
+                $vendorPayment->identifier,
+                'vendor_fee'
+            );
+            
+            if ($paymentResult) {
+                // Update vendor payment with new payment details
+                $vendorPayment->address = $paymentResult['pay_address'];
+                $vendorPayment->np_payment_id = $paymentResult['payment_id'];
+                $vendorPayment->pay_currency = $paymentResult['pay_currency'] ?? $currency;
+                $vendorPayment->expires_at = Carbon::now()->addMinutes((int) config('monero.address_expiration_time'));
+                $vendorPayment->save();
+                
+                return redirect()->route('become.payment')
+                    ->with('success', 'Payment currency changed to ' . strtoupper($currency) . '.');
+            } else {
+                return redirect()->route('become.payment')
+                    ->with('error', 'Unable to change payment currency. Please try again.');
+            }
+        } catch (\Exception $e) {
+            Log::error('Error changing vendor payment currency: ' . $e->getMessage());
+            return redirect()->route('become.payment')
+                ->with('error', 'An error occurred while changing the payment currency.');
         }
     }
 }

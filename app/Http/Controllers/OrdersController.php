@@ -31,7 +31,7 @@ class OrdersController extends Controller
     /**
      * Display the specified order.
      */
-    public function show($uniqueUrl, NowPaymentsService $nowPaymentsService)
+    public function show($uniqueUrl, Request $request, NowPaymentsService $nowPaymentsService)
     {
         // Process any orders that need auto status changes
         Orders::processAllAutoStatusChanges();
@@ -49,6 +49,10 @@ class OrdersController extends Controller
 
         // Determine if the current user is the buyer or vendor
         $isBuyer = $order->user_id === Auth::id();
+
+        // Get supported currencies for the selector
+        $supportedCurrencies = $nowPaymentsService->getSupportedCurrencies();
+        $selectedCurrency = $order->pay_currency ?? $nowPaymentsService->getDefaultCurrency();
 
         // For buyers with unpaid orders, check if a payment address exists
         // and handle payment processing
@@ -109,39 +113,66 @@ class OrdersController extends Controller
                     $order->xmr_usd_rate = $xmrRate;
                     $order->save();
                     
-                    // Create payment via NowPayments
+                    // Log payment creation attempt
+                    Log::info('Creating payment for order', [
+                        'order_id' => $order->id,
+                        'total_usd' => $order->total,
+                        'currency' => $selectedCurrency,
+                    ]);
+                    
+                    // Create payment via NowPayments with selected currency
                     $paymentResult = $nowPaymentsService->createPayment(
                         $order->total,
                         'usd',
-                        'xmr',
+                        $selectedCurrency,
                         $order->id,
                         'order'
                     );
                     
                     if ($paymentResult) {
+                        // Log successful payment creation
+                        Log::info('Payment created successfully', [
+                            'order_id' => $order->id,
+                            'payment_id' => $paymentResult['payment_id'],
+                            'pay_address' => $paymentResult['pay_address'],
+                            'pay_amount' => $paymentResult['pay_amount'],
+                            'pay_currency' => $paymentResult['pay_currency'],
+                        ]);
+
                         // Store NowPayments details in order
                         $order->np_payment_id = $paymentResult['payment_id'];
                         $order->pay_address = $paymentResult['pay_address'];
                         $order->pay_amount = $paymentResult['pay_amount'];
-                        $order->pay_currency = $paymentResult['pay_currency'] ?? 'xmr';
+                        $order->pay_currency = $paymentResult['pay_currency'] ?? $selectedCurrency;
                         $order->expires_at = now()->addMinutes((int) config('monero.address_expiration_time', 1440));
                         $order->save();
                     } else {
+                        Log::error('Failed to create payment', [
+                            'order_id' => $order->id,
+                            'currency' => $selectedCurrency,
+                        ]);
+                        
                         return redirect()->back()->with('error', 'Unable to create payment address. The payment service may be temporarily unavailable. Please try again in a few minutes.');
                     }
                 } catch (\Exception $e) {
-                    Log::error('Error setting up payment: ' . $e->getMessage());
+                    Log::error('Error setting up payment', [
+                        'order_id' => $order->id,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
+                    
                     return redirect()->back()->with('error', 'An error occurred while setting up your payment. Please try again later. If the problem persists, please contact support.');
                 }
             }
             
             // Refresh order data after potential updates
             $order->refresh();
+            $selectedCurrency = $order->pay_currency ?? $selectedCurrency;
             
             // Generate QR code if payment is not completed
             if (!$order->is_paid && $order->pay_address) {
                 try {
-                    $qrCode = $this->generateQrCode($order->pay_address, $order->pay_amount);
+                    $qrCode = $this->generateQrCode($order->pay_address, $order->pay_amount, $selectedCurrency, $nowPaymentsService);
                 } catch (\Exception $e) {
                     Log::error('Error generating QR code: ' . $e->getMessage());
                 }
@@ -175,7 +206,9 @@ class OrdersController extends Controller
             'isBuyer' => $isBuyer,
             'dispute' => $dispute,
             'qrCode' => $qrCode,
-            'totalItems' => $totalItems
+            'totalItems' => $totalItems,
+            'supportedCurrencies' => $supportedCurrencies,
+            'selectedCurrency' => $selectedCurrency,
         ]);
     }
 
@@ -226,15 +259,20 @@ class OrdersController extends Controller
 
     /**
      * Generate a QR code for the given address with optional amount.
-     * Creates a Monero URI format: monero:address?tx_amount=amount
+     * Creates a cryptocurrency URI format based on the currency type.
      */
-    private function generateQrCode($address, $amount = null)
+    private function generateQrCode($address, $amount = null, $currency = 'xmr', ?NowPaymentsService $nowPaymentsService = null)
     {
         try {
-            // Build Monero URI with amount if provided
-            $data = $address;
-            if ($amount !== null && $amount > 0) {
-                $data = "monero:{$address}?tx_amount={$amount}";
+            // Build payment URI based on currency
+            if ($nowPaymentsService) {
+                $data = $nowPaymentsService->buildPaymentUri($address, $amount, $currency);
+            } else {
+                // Fallback to Monero format if service not available
+                $data = $address;
+                if ($amount !== null && $amount > 0) {
+                    $data = "monero:{$address}?tx_amount={$amount}";
+                }
             }
             
             $result = Builder::create()
@@ -251,6 +289,102 @@ class OrdersController extends Controller
         } catch (\Exception $e) {
             Log::error('Error generating QR code: ' . $e->getMessage());
             return null;
+        }
+    }
+
+    /**
+     * Change the payment currency for an order.
+     */
+    public function changeCurrency(Request $request, $uniqueUrl, NowPaymentsService $nowPaymentsService)
+    {
+        $order = Orders::findByUrl($uniqueUrl);
+        
+        if (!$order) {
+            abort(404);
+        }
+
+        // Verify ownership - only the buyer can change currency
+        if ($order->user_id !== Auth::id()) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        // Only allow currency change for unpaid orders
+        if ($order->status !== Orders::STATUS_WAITING_PAYMENT || $order->is_paid) {
+            return redirect()->route('orders.show', $order->unique_url)
+                ->with('error', 'Cannot change currency for this order.');
+        }
+
+        $currency = strtolower($request->input('currency', 'xmr'));
+        
+        // Validate currency
+        if (!$nowPaymentsService->isValidCurrency($currency)) {
+            Log::warning('Invalid currency selection attempted', ['currency' => $currency, 'order_id' => $order->id]);
+            $currency = $nowPaymentsService->getDefaultCurrency();
+        }
+
+        // Don't create a new payment if the currency is already the same
+        if ($order->pay_currency === $currency && !empty($order->pay_address)) {
+            return redirect()->route('orders.show', $order->unique_url)
+                ->with('info', 'Payment currency is already set to ' . strtoupper($currency) . '.');
+        }
+
+        try {
+            // Log the currency change attempt
+            Log::info('Changing payment currency for order', [
+                'order_id' => $order->id,
+                'old_currency' => $order->pay_currency,
+                'new_currency' => $currency,
+                'old_payment_id' => $order->np_payment_id,
+            ]);
+
+            // Create new payment with selected currency
+            $paymentResult = $nowPaymentsService->createPayment(
+                $order->total,
+                'usd',
+                $currency,
+                $order->id,
+                'order'
+            );
+            
+            if ($paymentResult) {
+                // Log successful payment creation
+                Log::info('New payment created for currency change', [
+                    'order_id' => $order->id,
+                    'new_payment_id' => $paymentResult['payment_id'],
+                    'pay_address' => $paymentResult['pay_address'],
+                    'pay_amount' => $paymentResult['pay_amount'],
+                    'pay_currency' => $paymentResult['pay_currency'],
+                ]);
+
+                // Update order with new payment details
+                $order->np_payment_id = $paymentResult['payment_id'];
+                $order->pay_address = $paymentResult['pay_address'];
+                $order->pay_amount = $paymentResult['pay_amount'];
+                $order->pay_currency = $paymentResult['pay_currency'] ?? $currency;
+                $order->expires_at = now()->addMinutes((int) config('monero.address_expiration_time', 1440));
+                $order->save();
+                
+                return redirect()->route('orders.show', $order->unique_url)
+                    ->with('success', 'Payment currency changed to ' . strtoupper($order->pay_currency) . '. New payment address generated.');
+            } else {
+                Log::error('Failed to create payment for currency change', [
+                    'order_id' => $order->id,
+                    'currency' => $currency,
+                ]);
+                
+                return redirect()->route('orders.show', $order->unique_url)
+                    ->with('error', 'Unable to change payment currency. The payment service may be temporarily unavailable. Please try again.');
+            }
+        } catch (\Exception $e) {
+            Log::error('Error changing payment currency', [
+                'order_id' => $order->id,
+                'currency' => $currency,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            return redirect()->route('orders.show', $order->unique_url)
+                ->with('error', 'An error occurred while changing the payment currency. Please try again later.');
         }
     }
 

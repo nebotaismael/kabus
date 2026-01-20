@@ -20,20 +20,28 @@ class Product extends Model
     public const TYPE_DEADDROP = 'deaddrop';
 
     // Measurement units
-    public const UNIT_GRAM = 'g';
-    public const UNIT_KILOGRAM = 'kg';
-    public const UNIT_MILLILITER = 'ml';
-    public const UNIT_LITER = 'l';
+    public const UNIT_ACCOUNT = 'account';
+    public const UNIT_BLOTTER = 'blotter';
     public const UNIT_CENTIMETER = 'cm';
-    public const UNIT_METER = 'm';
-    public const UNIT_INCH = 'in';
-    public const UNIT_FOOT = 'ft';
-    public const UNIT_SQUARE_METER = 'm²';
-    public const UNIT_PIECE = 'piece';
     public const UNIT_DOZEN = 'dozen';
-    public const UNIT_HOUR = 'hour';
-    public const UNIT_DAY = 'day';
-    public const UNIT_MONTH = 'month';
+    public const UNIT_FOOT = 'ft';
+    public const UNIT_GALLON = 'gal';
+    public const UNIT_GRAM = 'g';
+    public const UNIT_INCH = 'in';
+    public const UNIT_ITEM = 'item';
+    public const UNIT_KILOGRAM = 'kg';
+    public const UNIT_LITER = 'l';
+    public const UNIT_METER = 'm';
+    public const UNIT_MILLILITER = 'ml';
+    public const UNIT_OUNCE = 'oz';
+    public const UNIT_PACKAGE = 'package';
+    public const UNIT_PIECE = 'piece';
+    public const UNIT_PILL = 'pill';
+    public const UNIT_POUND = 'lb';
+    public const UNIT_SQUARE_METER = 'm²';
+    public const UNIT_TABLET = 'tablet';
+    public const UNIT_TASK = 'task';
+    public const UNIT_TRANSFER = 'transfer';
 
     /**
      * Get all available measurement units.
@@ -43,20 +51,28 @@ class Product extends Model
     public static function getMeasurementUnits(): array
     {
         return [
-            self::UNIT_GRAM => 'Grams (g)',
-            self::UNIT_KILOGRAM => 'Kilograms (kg)',
-            self::UNIT_MILLILITER => 'Milliliters (ml)',
-            self::UNIT_LITER => 'Liters (l)',
-            self::UNIT_CENTIMETER => 'Centimeters (cm)',
-            self::UNIT_METER => 'Meters (m)',
-            self::UNIT_INCH => 'Inches (in)',
-            self::UNIT_FOOT => 'Feet (ft)',
-            self::UNIT_SQUARE_METER => 'Square Meters (m²)',
-            self::UNIT_PIECE => 'Units (pieces)',
-            self::UNIT_DOZEN => 'Dozens (12 items)',
-            self::UNIT_HOUR => 'Hours',
-            self::UNIT_DAY => 'Days',
-            self::UNIT_MONTH => 'Months'
+            self::UNIT_ACCOUNT => 'Accounts',
+            self::UNIT_BLOTTER => 'Blotters',
+            self::UNIT_CENTIMETER => 'Centimeters',
+            self::UNIT_DOZEN => 'Dozen',
+            self::UNIT_FOOT => 'Feet',
+            self::UNIT_GALLON => 'Gallons',
+            self::UNIT_GRAM => 'Grams',
+            self::UNIT_INCH => 'Inches',
+            self::UNIT_ITEM => 'Items',
+            self::UNIT_KILOGRAM => 'Kilograms',
+            self::UNIT_LITER => 'Liters',
+            self::UNIT_METER => 'Meters',
+            self::UNIT_MILLILITER => 'Milliliters',
+            self::UNIT_OUNCE => 'Ounces',
+            self::UNIT_PACKAGE => 'Packages',
+            self::UNIT_PIECE => 'Units [pieces]',
+            self::UNIT_PILL => 'Pills',
+            self::UNIT_POUND => 'Pounds [Lb]',
+            self::UNIT_SQUARE_METER => 'Square meters [m²]',
+            self::UNIT_TABLET => 'Tablets',
+            self::UNIT_TASK => 'Tasks',
+            self::UNIT_TRANSFER => 'Transfer',
         ];
     }
 

@@ -45,18 +45,27 @@
             <div class="settings-card-title">Anti‑Phishing Secret Phrase</div>
             @if ($user->secretPhrase)
                 <div class="settings-highlight">
-                    <p>Your Secret Phrase</p>
+                    <p>Your Current Secret Phrase</p>
                     <p class="settings-phrase">{{ $user->secretPhrase->phrase }}</p>
-                    <p>This phrase will always be displayed on your settings page. If you don't see this phrase when logging in, you may be on a phishing site.</p>
+                    <p>This phrase is displayed on every page after login. If you don't see this phrase, you may be on a phishing site.</p>
                 </div>
+                <form method="POST" action="{{ route('settings.updateSecretPhrase') }}">
+                    @csrf
+                    <div class="settings-form-group">
+                        <label class="settings-form-label" for="secret_phrase">Update Secret Phrase (4‑32 letters only)</label>
+                        <input class="settings-form-input" id="secret_phrase" type="text" name="secret_phrase" required minlength="4" maxlength="32" pattern="[a-zA-Z]+" title="Only letters (a-z, A-Z) are allowed">
+                    </div>
+                    <p class="settings-info-text">You can update your anti-phishing phrase at any time. Only letters are allowed (no numbers or special characters).</p>
+                    <button class="settings-button" type="submit">Update Secret Phrase</button>
+                </form>
             @else
                 <form method="POST" action="{{ route('settings.updateSecretPhrase') }}">
                     @csrf
                     <div class="settings-form-group">
-                        <label class="settings-form-label" for="secret_phrase">Secret Phrase (4‑16 letters, no numbers)</label>
-                        <input class="settings-form-input" id="secret_phrase" type="text" name="secret_phrase" required minlength="4" maxlength="16">
+                        <label class="settings-form-label" for="secret_phrase">Secret Phrase (4‑32 letters only)</label>
+                        <input class="settings-form-input" id="secret_phrase" type="text" name="secret_phrase" required minlength="4" maxlength="32" pattern="[a-zA-Z]+" title="Only letters (a-z, A-Z) are allowed">
                     </div>
-                    <p class="settings-info-text">This is a one‑time setting to help prevent phishing attacks. Your phrase will always be visible on this page.</p>
+                    <p class="settings-info-text">Set a secret phrase to help prevent phishing attacks. This phrase will be displayed on every page after login, allowing you to verify you're on the real site. Only letters are allowed (no numbers or special characters).</p>
                     <button class="settings-button" type="submit">Set Secret Phrase</button>
                 </form>
             @endif

@@ -134,7 +134,7 @@
                 <div class="home-highlight-title-wrapper">
                     <h2 class="home-highlight-heading">Advertised Products</h2>
                 </div>
-                <div class="home-highlight-container home-highlight-grid-3">
+                <div class="home-highlight-container home-highlight-grid-4">
                     @for($i = 1; $i <= 8; $i++)
                         @if(isset($adSlots[$i]))
                             <div class="home-highlight-card">
@@ -216,7 +216,7 @@
                 <div class="home-highlight-title-wrapper">
                     <h2 class="home-highlight-heading">Featured Products</h2>
                 </div>
-                <div class="home-highlight-container home-highlight-grid-3">
+                <div class="home-highlight-container home-highlight-grid-4">
                     @foreach($featuredProducts as $featured)
                         <div class="home-highlight-card">
                             {{-- Product Image --}}

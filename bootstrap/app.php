@@ -14,6 +14,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'api/webhooks/*',
         ]);
+
+        // Register middleware aliases
+        $middleware->alias([
+            'anti-phishing' => \App\Http\Middleware\AntiPhishingMiddleware::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

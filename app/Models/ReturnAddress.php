@@ -11,11 +11,50 @@ class ReturnAddress extends Model
 
     protected $fillable = [
         'user_id',
-        'monero_address',
+        'currency',
+        'address',
     ];
 
+    /**
+     * Get the user that owns the return address.
+     */
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the currency configuration for this address.
+     */
+    public function getCurrencyConfig(): ?array
+    {
+        $currencies = config('nowpayments.supported_currencies', []);
+        return $currencies[$this->currency] ?? null;
+    }
+
+    /**
+     * Get the display name for the currency.
+     */
+    public function getCurrencyNameAttribute(): string
+    {
+        $config = $this->getCurrencyConfig();
+        return $config['name'] ?? strtoupper($this->currency);
+    }
+
+    /**
+     * Get the symbol for the currency.
+     */
+    public function getCurrencySymbolAttribute(): string
+    {
+        $config = $this->getCurrencyConfig();
+        return $config['symbol'] ?? strtoupper($this->currency);
+    }
+
+    /**
+     * Scope to filter by currency.
+     */
+    public function scopeByCurrency($query, string $currency)
+    {
+        return $query->where('currency', strtolower($currency));
     }
 }

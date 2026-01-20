@@ -54,8 +54,8 @@ class ProfileController extends Controller
                     'required',
                     'string',
                     'min:4',
-                    'max:800',
-                    'regex:/^[\p{L}\p{N}\s\p{P}]+$/u'
+                    'max:2000',
+                    'regex:/^[\p{L}\p{N}\s\p{P}\p{S}\p{M}]+$/u'
                 ],
                 'profile_picture' => [
                     'nullable',
@@ -63,7 +63,7 @@ class ProfileController extends Controller
                     'max:800',
                 ],
             ], [
-                'description.regex' => 'Description can only contain letters, numbers, spaces, and punctuation marks.',
+                'description.regex' => 'Description can only contain letters, numbers, spaces, punctuation, and emojis.',
                 'profile_picture.max' => 'Profile picture must not be larger than 800KB.',
             ]);
             

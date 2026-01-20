@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\ValidationException;
 use Exception;
 use Illuminate\Database\QueryException;
 
@@ -132,7 +131,8 @@ class SettingsController extends Controller
 
 
     /**
-     * Update the user's secret phrase.
+     * Update the user's secret phrase (anti-phishing phrase).
+     * Allows both creating a new phrase and updating an existing one.
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse
@@ -148,13 +148,13 @@ class SettingsController extends Controller
                 'required',
                 'string',
                 'min:4',
-                'max:16',
+                'max:32',
                 'regex:/^[a-zA-Z]+$/',
             ],
         ], [
             'secret_phrase.required' => 'Secret phrase is required.',
             'secret_phrase.min' => 'Secret phrase must be at least 4 characters.',
-            'secret_phrase.max' => 'Secret phrase cannot exceed 16 characters.',
+            'secret_phrase.max' => 'Secret phrase cannot exceed 32 characters.',
             'secret_phrase.regex' => 'Secret phrase must contain only letters (no numbers or special characters).',
         ]);
 
@@ -165,26 +165,28 @@ class SettingsController extends Controller
         $user = Auth::user();
 
         try {
-            // Check if user already has a secret phrase
-            if ($user->secretPhrase) {
-                return back()->with('error', 'You already have a secret phrase. This is a one-time setting for security purposes.');
+            // Use updateOrCreate to handle both new phrases and updates
+            // This ensures no duplicate records are created for the same user
+            $secretPhrase = SecretPhrase::updateOrCreate(
+                ['user_id' => $user->id],
+                ['phrase' => $request->secret_phrase]
+            );
+
+            $isUpdate = !$secretPhrase->wasRecentlyCreated;
+
+            // Log secret phrase creation or update
+            if ($isUpdate) {
+                Log::info("User {$user->id} updated their anti-phishing phrase");
+                return back()->with('status', 'Anti-phishing phrase successfully updated. This phrase will be displayed on every page to help you verify site authenticity.');
+            } else {
+                Log::info("User {$user->id} added an anti-phishing phrase");
+                return back()->with('status', 'Anti-phishing phrase successfully added. This phrase will be displayed on every page to help you verify site authenticity.');
             }
-
-            // Create new secret phrase
-            $secretPhrase = new SecretPhrase();
-            $secretPhrase->user_id = $user->id;
-            $secretPhrase->phrase = $request->secret_phrase;
-            $secretPhrase->save();
-
-            // Log secret phrase creation
-            Log::info("User {$user->id} added a secret phrase");
-
-            return back()->with('status', 'Secret phrase successfully added. This phrase will be displayed on your settings page to help you identify genuine site access.');
         } catch (QueryException $e) {
-            Log::error("Error adding secret phrase for user {$user->id}: " . $e->getMessage());
-            return back()->with('error', 'An error occurred while adding your secret phrase. Please try again or contact support if the problem persists.');
+            Log::error("Error saving anti-phishing phrase for user {$user->id}: " . $e->getMessage());
+            return back()->with('error', 'An error occurred while saving your anti-phishing phrase. Please try again or contact support if the problem persists.');
         } catch (Exception $e) {
-            Log::error("Unexpected error adding secret phrase for user {$user->id}: " . $e->getMessage());
+            Log::error("Unexpected error saving anti-phishing phrase for user {$user->id}: " . $e->getMessage());
             return back()->with('error', 'An unexpected error occurred. Please try again or contact support if the problem persists.');
         }
     }

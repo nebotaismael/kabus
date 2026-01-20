@@ -12,7 +12,7 @@
                     </span>
                 @else
                     <span class="product-card-info-text">
-                        No Reviews
+                        Escrow
                     </span>
                 @endif
             </div>

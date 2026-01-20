@@ -26,10 +26,10 @@
             <div class="become-vendor-index-highlight" role="alert">
                 <img src="{{ asset('images/information.png') }}" alt="Information" class="become-vendor-index-info-icon">
                 <div class="become-vendor-index-highlight-content">
-                    <h4 class="become-vendor-index-highlight-heading">Return Address Required!</h4>
-                    <p class="become-vendor-index-highlight-text">You must add at least one return address before becoming a vendor. This is required to ensure secure and reliable payment processing.</p>
+                    <h4 class="become-vendor-index-highlight-heading">Payout Address Required!</h4>
+                    <p class="become-vendor-index-highlight-text">You must add at least one cryptocurrency payout address before becoming a vendor. This is required to receive payments when orders are completed.</p>
                     <hr class="become-vendor-index-divider">
-                    <p class="become-vendor-index-highlight-text become-vendor-index-mb-0">Please visit your Addresses page to add a return address first.</p>
+                    <p class="become-vendor-index-highlight-text become-vendor-index-mb-0">Please visit your Addresses page to add a payout address first.</p>
                 </div>
             </div>
         @endif

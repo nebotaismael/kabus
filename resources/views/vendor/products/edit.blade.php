@@ -119,6 +119,7 @@
                 </div>
 
                 <!-- Measurement Unit -->
+                @if($product->type !== 'digital')
                 <div class="products-common-create-field">
                     <label for="measurement_unit" class="products-common-create-label">
                         Measurement Unit
@@ -133,6 +134,9 @@
                         @endforeach
                     </select>
                 </div>
+                @else
+                <input type="hidden" name="measurement_unit" value="piece">
+                @endif
 
                 <!-- Shipping Locations -->
                 <div class="products-common-create-shipping-grid">

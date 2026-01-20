@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AntiPhishingController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\SettingsController;
@@ -33,8 +34,25 @@ use App\Http\Middleware\CheckBanned;
 // -----------------------------------------------------------------------------
 // Base Route
 // -----------------------------------------------------------------------------
-// When users first enter the site, they are taken to the login page.
-Route::get('/', [AuthController::class, 'showLoginForm'])->name('login');
+// When users first enter the site, check anti-phishing and redirect accordingly
+Route::get('/', function () {
+    // Check if anti-phishing is enabled
+    $antiPhishingService = app(\App\Services\AntiPhishingService::class);
+    
+    if ($antiPhishingService->isEnabled()) {
+        // Check if user has valid verification token
+        $token = session()->get('anti_phishing_verification_token');
+        $isVerified = session()->get('anti_phishing_verified', false);
+        
+        if (!$token || !is_string($token) || strlen($token) < 32 || $isVerified !== true) {
+            // No valid token - redirect to challenge first
+            return redirect()->route('anti-phishing.challenge');
+        }
+    }
+    
+    // Anti-phishing disabled or already verified - go to login
+    return redirect()->route('login');
+});
 
 // -----------------------------------------------------------------------------
 // Webhook Routes (No Authentication Required)
@@ -47,11 +65,23 @@ Route::post('/api/webhooks/nowpayments', [WebhookController::class, 'handle'])
 // -----------------------------------------------------------------------------
 
 Route::get('/pgp-key', function () {
-    return response()->file(storage_path('app/public/pgp_key.txt'));
+    $content = Storage::get('public/pgp_key.txt');
+    return response($content, 200, [
+        'Content-Type' => 'text/plain; charset=UTF-8',
+        'Cache-Control' => 'no-cache, no-store, must-revalidate',
+        'Pragma' => 'no-cache',
+        'Expires' => '0'
+    ]);
 })->name('pgp-key');
 
 Route::get('/canary', function () {
-    return response()->file(storage_path('app/public/canary.txt'));
+    $content = Storage::get('public/canary.txt');
+    return response($content, 200, [
+        'Content-Type' => 'text/plain; charset=UTF-8',
+        'Cache-Control' => 'no-cache, no-store, must-revalidate',
+        'Pragma' => 'no-cache',
+        'Expires' => '0'
+    ]);
 })->name('canary');
 
 // Static pages
@@ -66,10 +96,21 @@ Route::middleware('guest')->group(function () {
     // Route for banned users
     Route::get('/banned', [AuthController::class, 'showBanned'])->name('banned');
 
+    // Anti-phishing challenge routes (must be accessible without verification)
+    Route::get('/anti-phishing/challenge', [AntiPhishingController::class, 'showChallenge'])
+        ->name('anti-phishing.challenge');
+    Route::post('/anti-phishing/verify', [AntiPhishingController::class, 'verifyChallenge'])
+        ->name('anti-phishing.verify');
+
     Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
     Route::post('/register', [AuthController::class, 'register']);
-    Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-    Route::post('/login', [AuthController::class, 'login']);
+    
+    // Login routes protected by anti-phishing middleware
+    Route::middleware('anti-phishing')->group(function () {
+        Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+        Route::post('/login', [AuthController::class, 'login']);
+    });
+    
     Route::get('/mnemonic/{token}', [AuthController::class, 'showMnemonic'])->name('show.mnemonic');
 
     // Password reset routes using mnemonic
@@ -167,6 +208,7 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
     // Becoming a vendor routes
     Route::get('/become-vendor', [BecomeVendorController::class, 'index'])->name('become.vendor');
     Route::get('/become-vendor/payment', [BecomeVendorController::class, 'payment'])->name('become.payment');
+    Route::post('/become-vendor/payment/change-currency', [BecomeVendorController::class, 'changeCurrency'])->name('become.payment.change-currency');
     Route::get('/become-vendor/application', [BecomeVendorController::class, 'showApplication'])->name('become.vendor.application');
     Route::post('/become-vendor/application', [BecomeVendorController::class, 'submitApplication'])->name('become.vendor.submit-application');
 
@@ -188,6 +230,7 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
     Route::get('/orders', [OrdersController::class, 'index'])->name('orders.index');
     Route::get('/orders/{uniqueUrl}', [OrdersController::class, 'show'])->name('orders.show');
     Route::post('/orders', [OrdersController::class, 'store'])->name('orders.store');
+    Route::post('/orders/{uniqueUrl}/change-currency', [OrdersController::class, 'changeCurrency'])->name('orders.change-currency');
     Route::post('/orders/{uniqueUrl}/mark-sent', [OrdersController::class, 'markAsSent'])->name('orders.mark-sent');
     Route::post('/orders/{uniqueUrl}/mark-completed', [OrdersController::class, 'markAsCompleted'])->name('orders.mark-completed');
     Route::post('/orders/{uniqueUrl}/mark-cancelled', [OrdersController::class, 'markAsCancelled'])->name('orders.mark-cancelled');
@@ -206,6 +249,8 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
         Route::get('/admin', [AdminController::class, 'index'])->name('admin.index');
         Route::get('/admin/canary', [AdminController::class, 'showUpdateCanary'])->name('admin.canary');
         Route::post('/admin/canary', [AdminController::class, 'updateCanary'])->name('admin.canary.post');
+        Route::get('/admin/pgp-key', [AdminController::class, 'showUpdatePgpKey'])->name('admin.pgp-key');
+        Route::post('/admin/pgp-key', [AdminController::class, 'updatePgpKey'])->name('admin.pgp-key.post');
         
         // Admin statistics
         Route::get('/admin/statistics', [AdminController::class, 'statistics'])->name('admin.statistics');
@@ -224,6 +269,10 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
         Route::put('/admin/users/{user}/roles', [AdminController::class, 'updateUserRoles'])->name('admin.users.update-roles');
         Route::post('/admin/users/{user}/ban', [AdminController::class, 'banUser'])->name('admin.users.ban');
         Route::post('/admin/users/{user}/unban', [AdminController::class, 'unbanUser'])->name('admin.users.unban');
+        
+        // Registration logs (testing)
+        Route::get('/admin/registration-logs', [AdminController::class, 'registrationLogs'])->name('admin.registration-logs');
+        Route::delete('/admin/registration-logs', [AdminController::class, 'clearRegistrationLogs'])->name('admin.registration-logs.clear');
         
         // Admin dispute management
         Route::get('/admin/disputes', [DisputesController::class, 'adminIndex'])->name('admin.disputes.index');
@@ -273,6 +322,10 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
         Route::delete('/admin/products/{product}', [AdminController::class, 'destroyProduct'])->name('admin.products.destroy');
         Route::post('/admin/products/{product}/feature', [AdminController::class, 'featureProduct'])->name('admin.products.feature');
         Route::post('/admin/products/{product}/unfeature', [AdminController::class, 'unfeatureProduct'])->name('admin.products.unfeature');
+        
+        // Anti-Phishing Settings
+        Route::get('/admin/anti-phishing', [AdminController::class, 'showAntiPhishingSettings'])->name('admin.anti-phishing');
+        Route::post('/admin/anti-phishing', [AdminController::class, 'updateAntiPhishingSettings'])->name('admin.anti-phishing.update');
     });
 
     // -------------------------------------------------------------------------

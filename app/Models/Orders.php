@@ -457,22 +457,26 @@ class Orders extends Model
     /**
      * Process automatic payment to vendor when order is completed.
      * Uses NowPayments Payout API instead of Monero RPC.
+     * Pays in the same currency the buyer used for payment.
      * 
      * @return bool
      */
     public function processVendorPayment()
     {
-        // Only process payment if we have received Monero for this order
-        if (!$this->total_received_xmr || $this->total_received_xmr <= 0) {
-            \Illuminate\Support\Facades\Log::error("Order {$this->id} has no received XMR to pay vendor");
+        // Only process payment if we have received payment for this order
+        if (!$this->pay_amount || $this->pay_amount <= 0) {
+            \Illuminate\Support\Facades\Log::error("Order {$this->id} has no received payment amount to pay vendor");
             return false;
         }
 
         try {
+            // Get the currency used for this order payment
+            $payCurrency = $this->pay_currency ?? 'xmr';
+            
             // Calculate vendor payment amount (total received minus commission)
             // Commission is subtotal * commission_percentage, but we have it already calculated in the order
             $commissionRatio = $this->commission / $this->subtotal;
-            $vendorPaymentAmount = $this->total_received_xmr * (1 - $commissionRatio);
+            $vendorPaymentAmount = $this->pay_amount * (1 - $commissionRatio);
 
             // Get vendor
             $vendor = $this->vendor;
@@ -481,37 +485,62 @@ class Orders extends Model
                 return false;
             }
 
-            // Get a random return address for the vendor
-            $returnAddress = $vendor->returnAddresses()->inRandomOrder()->first();
+            // Get a return address for the vendor matching the payment currency
+            $returnAddress = $vendor->returnAddresses()
+                ->where('currency', $payCurrency)
+                ->inRandomOrder()
+                ->first();
+            
+            // If no address for this currency, try to find any address and log warning
             if (!$returnAddress) {
-                \Illuminate\Support\Facades\Log::error("Vendor {$vendor->id} has no return addresses for payment");
-                return false;
+                \Illuminate\Support\Facades\Log::warning("Vendor {$vendor->id} has no {$payCurrency} payout address. Checking for alternative addresses.");
+                
+                // Try XMR as fallback (most common)
+                $returnAddress = $vendor->returnAddresses()
+                    ->where('currency', 'xmr')
+                    ->inRandomOrder()
+                    ->first();
+                    
+                if (!$returnAddress) {
+                    // Get any available address
+                    $returnAddress = $vendor->returnAddresses()->inRandomOrder()->first();
+                }
+                
+                if (!$returnAddress) {
+                    \Illuminate\Support\Facades\Log::error("Vendor {$vendor->id} has no payout addresses for payment");
+                    return false;
+                }
+                
+                // Update pay currency to match the available address
+                $payCurrency = $returnAddress->currency;
+                \Illuminate\Support\Facades\Log::info("Using {$payCurrency} address for vendor payment instead of original currency");
             }
 
             // Use NowPayments Payout API
             $nowPaymentsService = app(\App\Services\NowPaymentsService::class);
             $result = $nowPaymentsService->createPayout(
-                $returnAddress->monero_address,
+                $returnAddress->address,
                 $vendorPaymentAmount,
-                'xmr',
+                $payCurrency,
                 "Vendor payment for order {$this->id}"
             );
 
             // Update order with payment details
             $this->vendor_payment_amount = $vendorPaymentAmount;
-            $this->vendor_payment_address = $returnAddress->monero_address;
+            $this->vendor_payment_address = $returnAddress->address;
             $this->vendor_payment_at = now();
 
             if ($result && isset($result['id'])) {
                 $this->vendor_payout_id = $result['id'];
-                \Illuminate\Support\Facades\Log::info("Vendor payment processed: Order {$this->id}, Amount: {$vendorPaymentAmount} XMR, Address: {$returnAddress->monero_address}, Payout ID: {$result['id']}");
+                \Illuminate\Support\Facades\Log::info("Vendor payment processed: Order {$this->id}, Amount: {$vendorPaymentAmount} {$payCurrency}, Address: {$returnAddress->address}, Payout ID: {$result['id']}");
             } else {
                 // Log error but don't block - payment details are saved for manual processing
                 \Illuminate\Support\Facades\Log::error("Vendor payout API call failed for order {$this->id}. Payment details saved for manual processing.", [
                     'order_id' => $this->id,
                     'vendor_id' => $vendor->id,
                     'amount' => $vendorPaymentAmount,
-                    'address' => $returnAddress->monero_address,
+                    'currency' => $payCurrency,
+                    'address' => $returnAddress->address,
                 ]);
             }
 
@@ -526,23 +555,27 @@ class Orders extends Model
     /**
      * Process automatic refund to buyer when an order is cancelled.
      * Uses NowPayments Payout API instead of Monero RPC.
+     * Refunds in the same currency the buyer used for payment.
      * 
      * @return bool
      */
     public function processBuyerRefund()
     {
-        // Only process refund if we have received Monero for this order
-        if (!$this->total_received_xmr || $this->total_received_xmr <= 0) {
-            \Illuminate\Support\Facades\Log::info("Order {$this->id} has no received XMR to refund to buyer");
+        // Only process refund if we have received payment for this order
+        if (!$this->pay_amount || $this->pay_amount <= 0) {
+            \Illuminate\Support\Facades\Log::info("Order {$this->id} has no received payment to refund to buyer");
             return false;
         }
         
         try {
+            // Get the currency used for this order payment
+            $payCurrency = $this->pay_currency ?? 'xmr';
+            
             // Get the commission percentage for cancelled orders
             $commissionPercentage = config('monero.cancelled_order_commission_percentage', 1.0);
             
             // Calculate buyer refund amount (total received minus commission)
-            $buyerRefundAmount = $this->total_received_xmr * (1 - ($commissionPercentage / 100));
+            $buyerRefundAmount = $this->pay_amount * (1 - ($commissionPercentage / 100));
             
             // Get buyer
             $buyer = $this->user;
@@ -551,37 +584,60 @@ class Orders extends Model
                 return false;
             }
             
-            // Get a random return address for the buyer
-            $returnAddress = $buyer->returnAddresses()->inRandomOrder()->first();
+            // Get a return address for the buyer matching the payment currency
+            $returnAddress = $buyer->returnAddresses()
+                ->where('currency', $payCurrency)
+                ->inRandomOrder()
+                ->first();
+            
+            // If no address for this currency, try to find any address
             if (!$returnAddress) {
-                \Illuminate\Support\Facades\Log::error("Buyer {$buyer->id} has no return addresses for refund");
-                return false;
+                \Illuminate\Support\Facades\Log::warning("Buyer {$buyer->id} has no {$payCurrency} refund address. Checking for alternative addresses.");
+                
+                // Try XMR as fallback
+                $returnAddress = $buyer->returnAddresses()
+                    ->where('currency', 'xmr')
+                    ->inRandomOrder()
+                    ->first();
+                    
+                if (!$returnAddress) {
+                    $returnAddress = $buyer->returnAddresses()->inRandomOrder()->first();
+                }
+                
+                if (!$returnAddress) {
+                    \Illuminate\Support\Facades\Log::error("Buyer {$buyer->id} has no return addresses for refund");
+                    return false;
+                }
+                
+                $payCurrency = $returnAddress->currency;
+                \Illuminate\Support\Facades\Log::info("Using {$payCurrency} address for buyer refund instead of original currency");
             }
             
             // Use NowPayments Payout API
             $nowPaymentsService = app(\App\Services\NowPaymentsService::class);
             $result = $nowPaymentsService->createPayout(
-                $returnAddress->monero_address,
+                $returnAddress->address,
                 $buyerRefundAmount,
-                'xmr',
+                $payCurrency,
                 "Buyer refund for order {$this->id}"
             );
             
             // Update order with refund details
             $this->buyer_refund_amount = $buyerRefundAmount;
-            $this->buyer_refund_address = $returnAddress->monero_address;
+            $this->buyer_refund_address = $returnAddress->address;
             $this->buyer_refund_at = now();
 
             if ($result && isset($result['id'])) {
                 $this->buyer_payout_id = $result['id'];
-                \Illuminate\Support\Facades\Log::info("Buyer refund processed: Order {$this->id}, Amount: {$buyerRefundAmount} XMR, Address: {$returnAddress->monero_address}, Payout ID: {$result['id']}");
+                \Illuminate\Support\Facades\Log::info("Buyer refund processed: Order {$this->id}, Amount: {$buyerRefundAmount} {$payCurrency}, Address: {$returnAddress->address}, Payout ID: {$result['id']}");
             } else {
                 // Log error but don't block - refund details are saved for manual processing
                 \Illuminate\Support\Facades\Log::error("Buyer refund payout API call failed for order {$this->id}. Refund details saved for manual processing.", [
                     'order_id' => $this->id,
                     'buyer_id' => $buyer->id,
                     'amount' => $buyerRefundAmount,
-                    'address' => $returnAddress->monero_address,
+                    'currency' => $payCurrency,
+                    'address' => $returnAddress->address,
                 ]);
             }
 

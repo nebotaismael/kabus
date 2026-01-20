@@ -41,23 +41,16 @@ class WebhookController extends Controller
         // Get the parsed payload for processing
         $payload = $request->all();
 
-        // Validate signature using raw body (more reliable)
+        // Validate signature using raw body
         if (!$this->nowPaymentsService->validateWebhookSignatureFromRaw($rawBody, $signature)) {
-            // Also try with parsed payload as fallback
-            if (!$this->nowPaymentsService->validateWebhookSignature($payload, $signature)) {
-                // Calculate what the signature should be for debugging
-                $calculatedSignature = $this->calculateExpectedSignature($payload);
-                
-                Log::warning('NowPayments webhook: Invalid signature', [
-                    'received_signature' => $signature,
-                    'calculated_signature' => $calculatedSignature,
-                    'payload' => $payload,
-                    'raw_body_length' => strlen($rawBody),
-                    'ip_address' => $request->ip(),
-                    'user_agent' => $request->userAgent(),
-                ]);
-                return response()->json(['error' => 'Invalid signature'], 403);
-            }
+            Log::warning('NowPayments webhook: Invalid signature', [
+                'received_signature' => $signature,
+                'payload' => $payload,
+                'raw_body_length' => strlen($rawBody),
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+            return response()->json(['error' => 'Invalid signature'], 403);
         }
 
         // Extract payment information
@@ -171,17 +164,29 @@ class WebhookController extends Controller
             return;
         }
 
+        // Extract payment details
+        $actuallyPaid = $payload['actually_paid'] ?? $payload['pay_amount'] ?? 0;
+        $payCurrency = $payload['pay_currency'] ?? $order->pay_currency ?? 'xmr';
+
         // Update order status
         $order->status = Orders::STATUS_PAYMENT_RECEIVED;
         $order->is_paid = true;
         $order->paid_at = now();
         $order->payment_completed_at = now();
-        $order->total_received_xmr = $payload['actually_paid'] ?? $payload['pay_amount'] ?? 0;
+        $order->total_received_xmr = $actuallyPaid;
+        
+        // Ensure pay_currency is set (in case it wasn't set before)
+        if (empty($order->pay_currency)) {
+            $order->pay_currency = $payCurrency;
+        }
+        
         $order->save();
 
         Log::info('NowPayments webhook: Order payment confirmed', [
             'order_id' => $orderId,
-            'amount_received' => $order->total_received_xmr,
+            'amount_received' => $actuallyPaid,
+            'currency' => $payCurrency,
+            'payment_id' => $payload['payment_id'] ?? null,
         ]);
     }
 
@@ -211,14 +216,26 @@ class WebhookController extends Controller
             return;
         }
 
+        // Extract payment details
+        $actuallyPaid = $payload['actually_paid'] ?? $payload['pay_amount'] ?? 0;
+        $payCurrency = $payload['pay_currency'] ?? $vendorPayment->pay_currency ?? 'xmr';
+
         // Update vendor payment status
         $vendorPayment->payment_completed = true;
-        $vendorPayment->total_received = $payload['actually_paid'] ?? $payload['pay_amount'] ?? 0;
+        $vendorPayment->total_received = $actuallyPaid;
+        
+        // Ensure pay_currency is set
+        if (empty($vendorPayment->pay_currency)) {
+            $vendorPayment->pay_currency = $payCurrency;
+        }
+        
         $vendorPayment->save();
 
         Log::info('NowPayments webhook: Vendor fee payment confirmed', [
             'identifier' => $identifier,
-            'amount_received' => $vendorPayment->total_received,
+            'amount_received' => $actuallyPaid,
+            'currency' => $payCurrency,
+            'payment_id' => $payload['payment_id'] ?? null,
         ]);
     }
 
@@ -248,52 +265,32 @@ class WebhookController extends Controller
             return;
         }
 
+        // Extract payment details
+        $actuallyPaid = $payload['actually_paid'] ?? $payload['pay_amount'] ?? 0;
+        $payCurrency = $payload['pay_currency'] ?? $advertisement->pay_currency ?? 'xmr';
+
         // Update advertisement with payment details
         $advertisement->payment_completed = true;
         $advertisement->payment_completed_at = now();
         $advertisement->starts_at = now();
         $advertisement->ends_at = now()->addDays((int) $advertisement->duration_days);
-        $advertisement->total_received = $payload['actually_paid'] ?? $payload['pay_amount'] ?? 0;
+        $advertisement->total_received = $actuallyPaid;
+        
+        // Ensure pay_currency is set
+        if (empty($advertisement->pay_currency)) {
+            $advertisement->pay_currency = $payCurrency;
+        }
+        
         $advertisement->save();
 
         Log::info('NowPayments webhook: Advertisement payment confirmed', [
             'payment_identifier' => $paymentIdentifier,
             'advertisement_id' => $advertisement->id,
-            'amount_received' => $advertisement->total_received,
+            'amount_received' => $actuallyPaid,
+            'currency' => $payCurrency,
+            'payment_id' => $payload['payment_id'] ?? null,
             'starts_at' => $advertisement->starts_at,
             'ends_at' => $advertisement->ends_at,
         ]);
-    }
-
-    /**
-     * Calculate the expected signature for debugging purposes.
-     *
-     * @param array $payload
-     * @return string
-     */
-    protected function calculateExpectedSignature(array $payload): string
-    {
-        $sortedPayload = $this->sortPayloadRecursively($payload);
-        $jsonPayload = json_encode($sortedPayload, JSON_UNESCAPED_SLASHES);
-        return hash_hmac('sha512', $jsonPayload, trim(config('nowpayments.ipn_secret')));
-    }
-
-    /**
-     * Sort payload keys alphabetically (recursive for nested objects).
-     *
-     * @param array $payload
-     * @return array
-     */
-    protected function sortPayloadRecursively(array $payload): array
-    {
-        ksort($payload);
-
-        foreach ($payload as $key => $value) {
-            if (is_array($value)) {
-                $payload[$key] = $this->sortPayloadRecursively($value);
-            }
-        }
-
-        return $payload;
     }
 }
