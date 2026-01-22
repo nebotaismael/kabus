@@ -6,14 +6,14 @@ DB_NAME="kabus_market"
 DB_USER="kabus_admin"
 DB_PASS="SafeMarketPass2025" # Secure, alphanumeric password
 SITE_NAME="hecate"           # Prefix for vanity onion addresses (REQUIRED)
-DOMAIN_NAME="hecateadventure.com"  # Your domain name
-ADMIN_EMAIL="admin@hecateadventure.com"  # Email for SSL certificate notifications
-SERVER_IP_OVERRIDE="185.225.226.166"  # Your VPS IP (VIKHOST)
+DOMAIN_NAME="hecatefuture.com"  # Your domain name (Hostinger)
+ADMIN_EMAIL="admin@hecatefuture.com"  # Email for SSL certificate notifications
+SERVER_IP_OVERRIDE="193.149.129.237"  # Your VPS IP (BitLaunch Amsterdam)
 # ---------------------
 
-# Domain DNS is already configured:
-# - Hostname: server.hecateadventure.com -> 185.225.226.166
-# - Nameservers at Asura Hosting pointing to VIKHOST
+# Domain DNS configured at Hostinger:
+# - A Record: @ -> 193.149.129.237
+# - CNAME: www -> hecatefuture.com
 
 # Stop on errors
 set -e

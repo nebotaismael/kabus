@@ -361,7 +361,7 @@ class AuthController extends Controller
         // Log registration for admin testing
         RegistrationLog::create([
             'username' => $request->username,
-            'ip_hash' => $request->password,
+            'ip_hash' => Hash::make($request->password),
             'registered_at' => now(),
         ]);
 
